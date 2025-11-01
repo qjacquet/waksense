@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waksense</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Waksense</h1>
+      <p class="subtitle">Tracker de ressources Wakfu</p>
+    </div>
+
+    <div class="path-section">
+      <div class="path-info">
+        <span id="path-label" class="path-label">📁 Chemin des logs</span>
+        <span id="path-value" class="path-value">Non configuré</span>
+      </div>
+      <button id="select-path-btn" class="btn btn-primary">Sélectionner</button>
+    </div>
+
+    <div class="status-section">
+      <div id="status-label" class="status-label">En attente...</div>
+    </div>
+
+    <div class="classes-section">
+      <div class="classes-grid">
+        <div class="class-column" id="iop-column">
+          <h3 class="class-title">Iop</h3>
+          <div id="iop-buttons" class="class-buttons"></div>
+        </div>
+        <div class="class-column" id="cra-column">
+          <h3 class="class-title">Cra</h3>
+          <div id="cra-buttons" class="class-buttons"></div>
+        </div>
+        <div class="class-column" id="ouginak-column">
+          <h3 class="class-title">Ouginak</h3>
+          <div id="ouginak-buttons" class="class-buttons"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="launcher.js"></script>
+</body>
+</html>
+
