@@ -3,7 +3,7 @@
  * Concentration, Courroux, Puissance, Préparation, Égaré
  */
 
-import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers';
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers.js';
 
 class IopBoostsTracker {
   private concentration: number = 0;

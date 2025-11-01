@@ -103,7 +103,7 @@ export class WindowManager {
         contextIsolation: true,
         preload: path.join(__dirname, '..', 'preload.js')
       },
-      icon: path.join(__dirname, '..', '..', '..', '..', 'Waksense.ico')
+      icon: path.join(__dirname, '..', '..', '..', 'Waksense.ico')
     });
 
     this.windows.set('launcher', window);

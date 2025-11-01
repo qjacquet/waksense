@@ -2,7 +2,7 @@
  * Detection Overlay - Overlay transparent pour afficher les classes détectées
  */
 
-import { ClassType } from '../types';
+import { ClassType } from '../types/index.js';
 
 interface DetectedClass {
   className: ClassType;

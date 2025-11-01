@@ -2,7 +2,7 @@
  * Cra Tracker - Suivi des ressources Cra en temps réel
  */
 
-import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers';
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers.js';
 
 class CraTracker {
   private affutage: number = 0;
@@ -16,15 +16,32 @@ class CraTracker {
   private maxRecentGains: number = 5;
 
   constructor() {
+    console.log('[CRA TRACKER] Initializing...');
     this.setupEventListeners();
     this.updateUI();
+    console.log('[CRA TRACKER] Initialized');
   }
 
   private setupEventListeners(): void {
+    console.log('[CRA TRACKER] Setting up event listeners...');
+    console.log('[CRA TRACKER] window.electronAPI available:', !!window.electronAPI);
+    
+    if (!window.electronAPI) {
+      console.error('[CRA TRACKER] window.electronAPI is not available!');
+      return;
+    }
+    
     setupTrackerEventListeners(
-      (line: string, parsed: any) => this.processLogLine(line, parsed),
-      () => this.resetResources()
+      (line: string, parsed: any) => {
+        console.log('[CRA TRACKER] Log line received:', line.substring(0, 100));
+        this.processLogLine(line, parsed);
+      },
+      () => {
+        console.log('[CRA TRACKER] Combat ended');
+        this.resetResources();
+      }
     );
+    console.log('[CRA TRACKER] Event listeners set up');
   }
 
   private resetResources(): void {
@@ -37,11 +54,19 @@ class CraTracker {
   }
 
   private processLogLine(line: string, parsed: any): void {
-    // Parse Affûtage
+    console.log('[CRA TRACKER] Processing line:', line.substring(0, 150));
+    
+    // Parse Affûtage (peut être dans ou hors combat)
     this.parseAffutage(line);
     
-    // Parse Précision
+    // Parse Précision (peut être dans ou hors combat)
     this.parsePrecision(line);
+    
+    // Les autres parsers nécessitent des lignes de combat
+    if (!line.includes("[Information (combat)]")) {
+      console.log('[CRA TRACKER] Line is not combat line, skipping combat-only parsers');
+      return;
+    }
     
     // Parse Pointe affûtée consumption
     this.parsePointeAffutee(line);
@@ -63,6 +88,7 @@ class CraTracker {
     // Format: "Affûtage (+X Niv.)"
     const match = line.match(/Affûtage\s*\(\+(\d+)\s*Niv\.\)/i);
     if (match) {
+      console.log('[CRA TRACKER] Affûtage detected:', match[1]);
       const newAffutage = parseInt(match[1], 10);
       
       // Handle Affûtage reaching 100+ - gain stacks and carry over excess
@@ -95,6 +121,7 @@ class CraTracker {
     // Format: "Précision (+X Niv.)"
     const precisionMatch = line.match(/Précision\s*\(\+(\d+)\s*Niv\.\)/i);
     if (precisionMatch) {
+      console.log('[CRA TRACKER] Précision detected:', precisionMatch[1]);
       const newPrecision = parseInt(precisionMatch[1], 10);
       this.precision = newPrecision;
       
@@ -240,6 +267,20 @@ class CraTracker {
   }
 
   private updateUI(): void {
+    console.log('[CRA TRACKER] Updating UI - Affûtage:', this.affutage, 'Précision:', this.precision);
+    
+    const affutageFill = document.getElementById('affutage-fill');
+    const affutageValue = document.getElementById('affutage-value');
+    const precisionFill = document.getElementById('precision-fill');
+    const precisionValue = document.getElementById('precision-value');
+    
+    console.log('[CRA TRACKER] DOM elements:', {
+      affutageFill: !!affutageFill,
+      affutageValue: !!affutageValue,
+      precisionFill: !!precisionFill,
+      precisionValue: !!precisionValue
+    });
+    
     updateProgressBar('affutage-fill', 'affutage-value', this.affutage, 100);
     updateProgressBar('precision-fill', 'precision-value', this.precision, this.precisionMax);
     
@@ -251,9 +292,19 @@ class CraTracker {
     updateStackIndicator('pointe-stacks', this.pointeAffuteeStacks, 3, 'Pointe');
     updateStackIndicator('balise-stacks', this.baliseAffuteeStacks, 3, 'Balise');
     updateBooleanIndicator('tir-precis-indicator', this.tirPrecisActive, 'Tir précis actif');
+    
+    // Vérifier après mise à jour
+    console.log('[CRA TRACKER] After update - affutage-fill width:', affutageFill?.style.width, 'precision-fill width:', precisionFill?.style.width);
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  new CraTracker();
+  console.log('[CRA TRACKER] DOM Content Loaded, initializing tracker...');
+  console.log('[CRA TRACKER] window.electronAPI check:', typeof window !== 'undefined' && typeof window.electronAPI !== 'undefined');
+  
+  // Attendre un peu pour s'assurer que electronAPI est disponible
+  setTimeout(() => {
+    console.log('[CRA TRACKER] Delayed initialization, electronAPI:', !!window.electronAPI);
+    new CraTracker();
+  }, 100);
 });

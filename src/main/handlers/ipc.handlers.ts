@@ -9,12 +9,33 @@ import { LogMonitor, ClassDetection } from '../core/log-monitor';
 
 export function setupIpcHandlers(
   launcherWindow: BrowserWindow | null,
-  logMonitor: LogMonitor | null,
+  getLogMonitor: () => LogMonitor | null,
   detectedClasses: Map<string, ClassDetection>,
   ensureLogMonitoring: () => void,
   startLogMonitoring: (logFilePath: string) => void,
   stopLogMonitoring: () => void
 ): void {
+  // Supprimer les handlers existants pour éviter les doublons
+  const handlers = [
+    'get-saved-characters',
+    'save-character',
+    'delete-character',
+    'get-log-path',
+    'select-log-path',
+    'start-monitoring',
+    'stop-monitoring',
+    'create-tracker',
+    'close-tracker',
+    'get-deduplication-stats',
+    'get-detected-classes'
+  ];
+  
+  handlers.forEach(handler => {
+    if (ipcMain.listenerCount(handler) > 0) {
+      ipcMain.removeHandler(handler);
+    }
+  });
+
   // Personnages
   ipcMain.handle('get-saved-characters', () => {
     return Config.getSavedCharacters();
@@ -161,7 +182,7 @@ export function setupIpcHandlers(
 
   // Statistiques
   ipcMain.handle('get-deduplication-stats', () => {
-    return logMonitor?.getDeduplicationStats() || null;
+    return getLogMonitor()?.getDeduplicationStats() || null;
   });
 
   ipcMain.handle('get-detected-classes', () => {

@@ -43,7 +43,7 @@ function createDetectionOverlay(): void {
     resizable: false
   });
 
-  detectionOverlay.loadFile(path.join(__dirname, '..', '..', 'renderer', 'core', 'detection-overlay', 'index.html'));
+  detectionOverlay.loadFile(path.join(__dirname, '..', 'renderer', 'core', 'detection-overlay', 'index.html'));
 
   detectionOverlay.webContents.once('did-finish-load', () => {
     if (!detectionOverlay || detectionOverlay.isDestroyed()) {
@@ -78,7 +78,7 @@ function createLauncherWindow(): void {
     console.error(`[LAUNCHER] Failed to load: ${errorCode} - ${errorDescription} - ${validatedURL}`);
   });
 
-  launcherWindow.loadFile(path.join(__dirname, '..', '..', 'renderer', 'core', 'launcher', 'index.html'));
+  launcherWindow.loadFile(path.join(__dirname, '..', 'renderer', 'core', 'launcher', 'index.html'));
 
   launcherWindow.on('closed', () => {
     launcherWindow = null;
@@ -90,7 +90,7 @@ app.whenReady().then(() => {
 
   setupIpcHandlers(
     launcherWindow,
-    logMonitor,
+    () => logMonitor, // Passer une fonction qui retourne le logMonitor actuel
     detectedClasses,
     ensureLogMonitoring,
     startLogMonitoring,
@@ -99,6 +99,14 @@ app.whenReady().then(() => {
 
   if (launcherWindow) {
     launcherWindow.webContents.once('did-finish-load', () => {
+      // Envoyer les classes déjà détectées au launcher
+      const alreadyDetected = Array.from(detectedClasses.values());
+      console.log(`[MAIN] Sending ${alreadyDetected.length} already detected classes to launcher`);
+      for (const detection of alreadyDetected) {
+        console.log(`[MAIN] Sending class detection: ${detection.className} - ${detection.playerName}`);
+        WindowManager.safeSendToWindow(launcherWindow, 'class-detected', detection);
+      }
+      
       const savedLogsDir = Config.getLogPath();
       let logFilePath: string;
       
@@ -165,24 +173,21 @@ function startLogMonitoring(logFilePath: string): void {
   });
 
   logMonitor.on('logLine', (line: string, parsed: any) => {
-    WindowManager.getAllWindows().forEach((window, id) => {
+    const trackerWindows = WindowManager.getAllWindows();
+    console.log(`[MAIN] Log line emitted, ${trackerWindows.size} windows total`);
+    
+    trackerWindows.forEach((window, id) => {
       if (id.startsWith('tracker-')) {
-        WindowManager.safeSendToWindow(window, 'log-line', line, parsed);
+        console.log(`[MAIN] Sending log to tracker: ${id}`);
+        const sent = WindowManager.safeSendToWindow(window, 'log-line', line, parsed);
+        if (!sent) {
+          console.error(`[MAIN] Failed to send log to tracker: ${id}`);
+        }
       }
     });
   });
   
   logMonitor.start();
-  
-  // Mettre à jour la référence pour les handlers IPC
-  setupIpcHandlers(
-    launcherWindow,
-    logMonitor,
-    detectedClasses,
-    ensureLogMonitoring,
-    startLogMonitoring,
-    stopLogMonitoring
-  );
 }
 
 function stopLogMonitoring(): void {
