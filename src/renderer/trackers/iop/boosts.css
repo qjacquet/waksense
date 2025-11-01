@@ -4,269 +4,110 @@
   box-sizing: border-box;
 }
 
-html, body {
+body {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
   background: transparent;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow: hidden;
-  -webkit-app-region: drag; /* Permet de déplacer la fenêtre */
 }
 
 .tracker-container {
-  width: 100%;
-  min-height: 100%;
+  width: 320px;
+  min-height: 120px;
   padding: 5px;
-  background: transparent;
+  background: rgba(10, 10, 10, 0.85);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Permettre le déplacement de la fenêtre */
   -webkit-app-region: drag;
-  position: relative;
 }
 
-/* Concentration Section */
-.concentration-section {
+.resource-bars {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 5px;
-  margin-bottom: 10px;
-  -webkit-app-region: no-drag;
 }
 
-.concentration-icon {
-  width: 28px;
-  height: 28px;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64b5f6;
-  font-weight: bold;
-  background: transparent;
-  -webkit-app-region: no-drag;
-}
-
-.concentration-bar-container {
-  flex: 1;
+.resource-bar {
   position: relative;
-  -webkit-app-region: no-drag;
-}
-
-.concentration-bar {
-  width: 250px;
-  height: 24px;
-  background: rgba(0, 0, 0, 0.77);
-  border-radius: 10px;
-  border: 2px solid rgba(51, 51, 51, 1);
-  position: relative;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 9px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Désactiver le drag sur les barres pour permettre les interactions */
   -webkit-app-region: no-drag;
 }
 
-.concentration-fill {
-  height: 100%;
-  background: linear-gradient(90deg, 
-    rgba(64, 181, 246, 0.8) 0%, 
-    rgba(33, 150, 243, 1) 50%,
-    rgba(0, 188, 212, 1) 100%);
-  border-radius: 10px;
-  transition: width 0.12s ease;
-}
-
-.concentration-text {
+.bar-label {
   position: absolute;
+  left: 5px;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
+  transform: translateY(-50%);
+  font-size: 10px;
   font-weight: bold;
   color: white;
-  text-shadow: 
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 0 3px #000;
-  z-index: 10;
+  z-index: 2;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-/* Courroux Section */
-.courroux-section {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  -webkit-app-region: no-drag;
-}
-
-.courroux-icon {
-  width: 35px;
-  height: 35px;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ff6b35;
-  font-weight: bold;
-  background: transparent;
-}
-
-.courroux-counter {
-  width: 35px;
-  height: 35px;
-  font-size: 18px;
-  font-weight: bold;
-  color: white;
-  text-shadow: 
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 0 3px #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: transparent;
-}
-
-/* Puissance Bars */
-.puissance-section {
-  position: absolute;
-  top: -15px;
-  left: 0;
-  display: flex;
-  gap: 5px;
-  -webkit-app-region: no-drag;
-}
-
-.puissance-bars-container {
-  display: flex;
-  gap: 5px;
-}
-
-.puissance-bar {
-  width: 30px;
-  height: 6px;
-  background: rgba(255, 255, 255, 30);
-  border: 1px solid rgba(255, 255, 255, 50);
-  border-radius: 3px;
-  transition: all 0.2s ease;
-}
-
-.puissance-bar.active {
-  background: rgba(100, 200, 255, 200);
-  border: 1px solid rgba(150, 220, 255, 255);
-}
-
-/* Égaré Icon */
-.egare-section {
-  position: absolute;
-  top: -50px;
-  left: 0;
-  -webkit-app-region: no-drag;
-}
-
-.egare-icon {
-  width: 24px;
-  height: 24px;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ff6b35;
-  font-weight: bold;
-  background: transparent;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.egare-icon.visible {
-  opacity: 1;
-}
-
-/* Préparation Section */
-.preparation-section {
-  position: absolute;
-  top: 0;
-  right: -290px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  -webkit-app-region: no-drag;
-}
-
-.preparation-icon {
-  width: 40px;
-  height: 40px;
-  font-size: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ff9800;
-  font-weight: bold;
-  background: transparent;
-}
-
-.preparation-counter {
-  width: 40px;
-  height: 40px;
-  font-size: 18px;
-  font-weight: bold;
-  color: white;
-  text-shadow: 
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 0 3px #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: transparent;
-}
-
-/* Timeline Container */
-.timeline-container {
-  margin-top: 30px;
-  display: flex;
-  gap: 0;
-  -webkit-app-region: no-drag;
-}
-
-.timeline-icon {
-  width: 32px;
-  height: 32px;
-  position: relative;
-  background: transparent;
-}
-
-.timeline-icon img {
-  width: 100%;
+.bar-fill {
   height: 100%;
-  object-fit: contain;
+  background: linear-gradient(90deg, #4a9eff 0%, #1e88e5 100%);
+  border-radius: 9px;
+  transition: width 0.3s ease;
+  z-index: 1;
 }
 
-.timeline-cost {
+/* Concentration bar - blue */
+.concentration-bar .bar-fill {
+  background: linear-gradient(90deg, #40b5f6 0%, #2196f3 50%, #00bcd4 100%);
+}
+
+.bar-value {
   position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
   font-weight: bold;
   color: white;
-  text-shadow: 
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
-  white-space: nowrap;
+  z-index: 2;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+.stacks-container {
+  display: flex;
+  gap: 10px;
+  padding: 2px 5px;
+  font-size: 10px;
+  color: #ffd700;
+  font-weight: bold;
+  /* Désactiver le drag pour permettre les interactions */
+  -webkit-app-region: no-drag;
+}
+
+.stack-indicator {
+  background: rgba(255, 215, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.egare-indicator {
+  display: none;
+  padding: 4px 8px;
+  background: rgba(255, 87, 34, 0.3);
+  border: 1px solid rgba(255, 87, 34, 0.6);
+  border-radius: 4px;
+  color: #ff5722;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 3px;
+  /* Désactiver le drag pour permettre les interactions */
+  -webkit-app-region: no-drag;
+}

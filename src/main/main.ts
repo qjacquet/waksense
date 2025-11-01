@@ -278,12 +278,11 @@ function stopLogMonitoring(): void {
   }
 }
 
-// Helper pour créer un tracker IOP
+// Helper pour créer un tracker IOP (sans toggle, juste créer ou récupérer)
 function createIopTracker(trackerId: string, htmlFile: string, width: number, height: number, rendererName?: string): BrowserWindow {
   if (WindowManager.hasWindow(trackerId)) {
     const existingWindow = WindowManager.getWindow(trackerId);
-    existingWindow?.show();
-    existingWindow?.focus();
+    // Juste retourner la fenêtre existante (pas de toggle ici)
     return existingWindow!;
   }
 
@@ -348,11 +347,56 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
     const boostsTrackerId = `tracker-${className}-${playerName}-boosts`;
     const combosTrackerId = `tracker-${className}-${playerName}-combos`;
 
-    const boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+    // Vérifier si les fenêtres existent déjà
+    const boostsExists = WindowManager.hasWindow(boostsTrackerId);
+    const combosExists = WindowManager.hasWindow(combosTrackerId);
+    
+    // Si les deux existent, déterminer l'état actuel et toggle les deux ensemble
+    if (boostsExists && combosExists) {
+      const boostsWindow = WindowManager.getWindow(boostsTrackerId);
+      const combosWindow = WindowManager.getWindow(combosTrackerId);
+      const isCurrentlyVisible = boostsWindow?.isVisible() || false;
+      
+      // Toggle les deux fenêtres ensemble
+      if (isCurrentlyVisible) {
+        boostsWindow?.hide();
+        combosWindow?.hide();
+      } else {
+        boostsWindow?.show();
+        boostsWindow?.focus();
+        combosWindow?.show();
+        combosWindow?.focus();
+      }
+      
+      return `${boostsTrackerId},${combosTrackerId}:${!isCurrentlyVisible}`;
+    }
+    
+    // Si une seule existe, créer celle qui manque
+    let boostsWindow: BrowserWindow | undefined;
+    let combosWindow: BrowserWindow | undefined;
+    
+    if (boostsExists) {
+      boostsWindow = WindowManager.getWindow(boostsTrackerId);
+      combosWindow = createIopTracker(combosTrackerId, 'combos.html', 240, 180, 'IOP COMBOS');
+      // Afficher la fenêtre manquante si la fenêtre existante est visible
+      if (boostsWindow?.isVisible()) {
+        combosWindow?.show();
+      }
+    } else if (combosExists) {
+      combosWindow = WindowManager.getWindow(combosTrackerId);
+      boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+      // Afficher la fenêtre manquante si la fenêtre existante est visible
+      if (combosWindow?.isVisible()) {
+        boostsWindow?.show();
+      }
+    } else {
+      // Créer les deux fenêtres
+      boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+      combosWindow = createIopTracker(combosTrackerId, 'combos.html', 240, 180, 'IOP COMBOS');
+    }
     
     // Positionner la fenêtre combos à côté de la fenêtre boosts
-    const combosWindow = createIopTracker(combosTrackerId, 'combos.html', 240, 180, 'IOP COMBOS');
-    if (boostsWindow && !boostsWindow.isDestroyed()) {
+    if (boostsWindow && combosWindow && !boostsWindow.isDestroyed() && !combosWindow.isDestroyed()) {
       const boostsBounds = boostsWindow.getBounds();
       combosWindow.setPosition(boostsBounds.x + boostsBounds.width + 10, boostsBounds.y);
     }
@@ -363,7 +407,9 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
       startLogMonitoring(Config.getLogFilePath(logPath));
     }
 
-    return `${boostsTrackerId},${combosTrackerId}`;
+    // Vérifier si les fenêtres sont visibles pour retourner l'état
+    const isVisible = boostsWindow && !boostsWindow.isDestroyed() && boostsWindow.isVisible();
+    return `${boostsTrackerId},${combosTrackerId}:${isVisible}`;
   }
 
   // Pour les autres classes (Cra, Ouginak), créer une seule fenêtre
@@ -372,9 +418,15 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
   // Vérifier si le tracker existe déjà
   if (WindowManager.hasWindow(trackerId)) {
     const existingWindow = WindowManager.getWindow(trackerId);
-    existingWindow?.show();
-    existingWindow?.focus();
-    return trackerId;
+    // Toggle: si visible, cacher; si caché, afficher
+    if (existingWindow?.isVisible()) {
+      existingWindow.hide();
+      return `${trackerId}:false`;
+    } else {
+      existingWindow?.show();
+      existingWindow?.focus();
+      return `${trackerId}:true`;
+    }
   }
 
   // Créer une nouvelle fenêtre de tracker (transparente, sans frame)
@@ -427,7 +479,7 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
     startLogMonitoring(Config.getLogFilePath(logPath));
   }
 
-  return trackerId;
+  return `${trackerId}:true`;
 });
 
 // Gestion IPC pour fermer un tracker

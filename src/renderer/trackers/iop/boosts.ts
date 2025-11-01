@@ -3,8 +3,6 @@
  * Concentration, Courroux, Puissance, Préparation, Égaré
  */
 
-import { IOP_SPELL_COST_MAP, IOP_SPELL_ICON_MAP } from '../../../shared/iop-spell-data';
-
 class IopBoostsTracker {
   private concentration: number = 0;
   private courroux: number = 0;
@@ -19,47 +17,13 @@ class IopBoostsTracker {
   private preparationLossCaster: string | null = null;
   private preparationLossSpell: string | null = null;
 
-  // UI Elements
-  private concentrationBar: HTMLElement | null = null;
-  private concentrationFill: HTMLElement | null = null;
-  private concentrationText: HTMLElement | null = null;
-  private courrouxSection: HTMLElement | null = null;
-  private courrouxCounter: HTMLElement | null = null;
-  private puissanceSection: HTMLElement | null = null;
-  private egareSection: HTMLElement | null = null;
-  private egareIcon: HTMLElement | null = null;
-  private preparationSection: HTMLElement | null = null;
-  private preparationCounter: HTMLElement | null = null;
-  private timelineContainer: HTMLElement | null = null;
-
   constructor() {
-    this.initializeUIElements();
     this.setupEventListeners();
     this.updateUI();
   }
 
-  private initializeUIElements(): void {
-    this.concentrationBar = document.getElementById('concentration-bar');
-    this.concentrationFill = document.getElementById('concentration-fill');
-    this.concentrationText = document.getElementById('concentration-text');
-    this.courrouxSection = document.getElementById('courroux-section');
-    this.courrouxCounter = document.getElementById('courroux-counter');
-    this.puissanceSection = document.getElementById('puissance-section');
-    this.egareSection = document.getElementById('egare-section');
-    this.egareIcon = document.getElementById('egare-icon');
-    this.preparationSection = document.getElementById('preparation-section');
-    this.preparationCounter = document.getElementById('preparation-counter');
-    this.timelineContainer = document.getElementById('timeline-container');
-  }
-
   private setupEventListeners(): void {
     window.electronAPI.onLogLine((line: string, parsed: any) => {
-      // Handle turn end (clear timeline)
-      if (line.includes('reportée pour le tour suivant') || line.includes('reportées pour le tour suivant')) {
-        this.timelineEntries = [];
-        this.updateTimeline();
-      }
-      
       this.processLogLine(line, parsed);
     });
     
@@ -70,15 +34,27 @@ class IopBoostsTracker {
     window.electronAPI.onCombatEnded(() => {
       this.inCombat = false;
       this.resetResources();
-      this.updateUI();
     });
   }
 
+  private resetResources(): void {
+    this.concentration = 0;
+    this.courroux = 0;
+    this.puissance = 0;
+    this.preparation = 0;
+    this.egare = false;
+    this.pendingPreparationLoss = false;
+    this.preparationLossCaster = null;
+    this.preparationLossSpell = null;
+    this.updateUI();
+  }
+
   private processLogLine(line: string, parsed: any): void {
+    // Parse resource gains FIRST (before spell casts that might consume them)
     // Parse Concentration
     this.parseConcentration(line);
     
-    // Parse Courroux
+    // Parse Courroux (MUST be before handleSpellCast which might reset it)
     this.parseCourroux(line);
     
     // Parse Puissance
@@ -90,18 +66,21 @@ class IopBoostsTracker {
     // Parse Égaré
     this.parseEgare(line);
     
-    // Parse spell consumption
+    // Parse spell consumption (after resource parsing to avoid resetting before gain)
     if (parsed.isSpellCast && parsed.spellCast) {
       this.handleSpellCast(parsed.spellCast, line);
     }
     
     // Parse damage for Préparation consumption
     this.parseDamage(line);
-    
-    this.updateUI();
   }
 
   private parseConcentration(line: string): void {
+    // Check for concentration in combat lines
+    if (!line.includes("[Information (combat)]") || !line.includes("Concentration")) {
+      return;
+    }
+    
     const concentrationMatch = line.match(/Concentration \(\+(\d+) Niv\.\)/);
     if (concentrationMatch) {
       const concentrationValue = parseInt(concentrationMatch[1], 10);
@@ -121,26 +100,51 @@ class IopBoostsTracker {
       } else {
         this.concentration = concentrationValue;
       }
+      
+      this.updateUI();
     }
   }
 
   private parseCourroux(line: string): void {
+    // Only process combat lines
+    if (!line.includes("[Information (combat)]")) {
+      return;
+    }
+    
+    // Parse Courroux gains FIRST - "Courroux (+X Niv.) (Compulsion)" OR "Courroux (+X Niv.) (Concentration)"
+    // Note: The number in (+X Niv.) is the TOTAL current amount, not the amount gained
     const courrouxGainMatch = line.match(/Courroux \(\+(\d+) Niv\.\) \((Compulsion|Concentration)\)/);
     if (courrouxGainMatch) {
       const courrouxTotal = parseInt(courrouxGainMatch[1], 10);
-      this.courroux = Math.min(courrouxTotal, 4);
+      const oldCourroux = this.courroux;
+      this.courroux = Math.min(courrouxTotal, 4); // Max 4 stacks
+      if (this.courroux !== oldCourroux) {
+        this.updateUI();
+      }
+      return; // Return early to avoid checking loss patterns
     }
     
-    if (line.includes("n'est plus sous l'emprise de 'Courroux' (Compulsion)")) {
-      const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
-      if (playerMatch && playerMatch[1] === this.trackedPlayerName) {
-        this.courroux = 0;
+    // Parse Courroux loss from damage - damage dealt with (Courroux) tag
+    // Pattern: "[Information (combat)] monster: -xx PV (element) (Courroux)"
+    if (line.includes('(Courroux)') && line.includes('PV')) {
+      const courrouxDamageMatch = line.match(/\[Information \(combat\)\] .*: -(\d+) PV \([^)]+\) \(Courroux\)/);
+      if (courrouxDamageMatch && this.courroux > 0) {
+        this.courroux = 0; // Lose ALL stacks when damage is dealt with courroux
+        this.updateUI();
+        return;
       }
     }
     
-    // Check for Courroux loss from damage
-    if (line.includes('(Courroux)') && line.includes('PV')) {
-      this.courroux = 0;
+    // Parse Courroux loss - "n'est plus sous l'emprise de 'Courroux' (Compulsion)"
+    if (line.includes("n'est plus sous l'emprise de 'Courroux' (Compulsion)")) {
+      const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
+      if (playerMatch && this.trackedPlayerName && playerMatch[1].trim() === this.trackedPlayerName.trim()) {
+        if (this.courroux > 0) {
+          this.courroux = 0; // Lose ALL stacks
+          this.updateUI();
+        }
+        return;
+      }
     }
   }
 
@@ -148,13 +152,21 @@ class IopBoostsTracker {
     const puissanceMatch = line.match(/Puissance \(\+(\d+) Niv\.\)/);
     if (puissanceMatch) {
       const puissanceValue = parseInt(puissanceMatch[1], 10);
+      const oldPuissance = this.puissance;
       this.puissance = Math.min(puissanceValue, 50);
+      if (this.puissance !== oldPuissance) {
+        this.updateUI();
+      }
     }
     
     if (line.includes("n'est plus sous l'emprise de 'Puissance' (Iop isolé)")) {
       const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
       if (playerMatch && playerMatch[1] === this.trackedPlayerName) {
+        const oldPuissance = this.puissance;
         this.puissance = Math.max(0, this.puissance - 10);
+        if (this.puissance !== oldPuissance) {
+          this.updateUI();
+        }
       }
     }
   }
@@ -163,17 +175,20 @@ class IopBoostsTracker {
     const preparationGainMatch = line.match(/Préparation \(\+(\d+) Niv\.\)/);
     if (preparationGainMatch) {
       const preparationTotal = parseInt(preparationGainMatch[1], 10);
+      const oldPreparation = this.preparation;
       this.preparation = preparationTotal;
+      if (this.preparation !== oldPreparation) {
+        this.updateUI();
+      }
     }
   }
 
   private parseEgare(line: string): void {
-    // Égaré is gained via spells (Fulgur, Colère de Iop) - handled in handleSpellCast
-    
     // Égaré loss - turn passing
     if (line.includes('reportée pour le tour suivant') || line.includes('reportées pour le tour suivant')) {
       if (this.egare) {
         this.egare = false;
+        this.updateUI();
       }
     }
   }
@@ -187,11 +202,15 @@ class IopBoostsTracker {
     if (!this.inCombat) {
       this.inCombat = true;
       this.puissance = 30;
+      this.updateUI();
     }
     
     // Handle Courroux loss spells
     if (['Super Iop Punch', 'Roknocerok', 'Tannée'].includes(spellCast.spellName)) {
-      this.courroux = 0;
+      if (this.courroux > 0) {
+        this.courroux = 0;
+        this.updateUI();
+      }
     }
     
     // Handle Préparation loss
@@ -204,11 +223,7 @@ class IopBoostsTracker {
     // Handle Égaré gain spells
     if (['Fulgur', 'Colère de Iop'].includes(spellCast.spellName)) {
       this.egare = true;
-    }
-    
-    // Add to timeline (only if spell is known)
-    if (IOP_SPELL_ICON_MAP.has(spellCast.spellName)) {
-      this.addToTimeline(spellCast.spellName);
+      this.updateUI();
     }
   }
 
@@ -223,145 +238,48 @@ class IopBoostsTracker {
       this.pendingPreparationLoss = false;
       this.preparationLossCaster = null;
       this.preparationLossSpell = null;
+      this.updateUI();
     }
-  }
-
-
-  private timelineEntries: Array<{spell: string; cost: string; icon: string; alpha: number; slide: number}> = [];
-  private timelineMaxSlots: number = 5;
-
-  private addToTimeline(spellName: string): void {
-    const cost = IOP_SPELL_COST_MAP.get(spellName) || '?';
-    const iconFileName = IOP_SPELL_ICON_MAP.get(spellName) || '';
-    
-    const entry = {
-      spell: spellName,
-      cost: cost,
-      icon: iconFileName,
-      alpha: 0.0,
-      slide: -16
-    };
-    
-    this.timelineEntries.push(entry);
-    
-    // Keep only last N entries
-    if (this.timelineEntries.length > this.timelineMaxSlots) {
-      this.timelineEntries = this.timelineEntries.slice(-this.timelineMaxSlots);
-    }
-    
-    this.updateTimeline();
-  }
-
-  private updateTimeline(): void {
-    if (!this.timelineContainer) return;
-    
-    // Clear existing timeline entries
-    this.timelineContainer.innerHTML = '';
-    
-    // Display newest to oldest (left to right)
-    const entriesToShow = this.timelineEntries.slice(-this.timelineMaxSlots);
-    entriesToShow.reverse(); // Reverse to show newest first
-    
-    for (let i = 0; i < this.timelineMaxSlots; i++) {
-      const timelineIcon = document.createElement('div');
-      timelineIcon.className = 'timeline-icon';
-      timelineIcon.id = `timeline-icon-${i}`;
-      
-      if (i < entriesToShow.length) {
-        const entry = entriesToShow[i];
-        const img = document.createElement('img');
-        img.src = `img/${entry.icon}`;
-        img.alt = entry.spell;
-        img.onerror = () => {
-          timelineIcon.textContent = '?';
-        };
-        
-        const cost = document.createElement('div');
-        cost.className = 'timeline-cost';
-        cost.textContent = entry.cost;
-        
-        timelineIcon.appendChild(img);
-        timelineIcon.appendChild(cost);
-        timelineIcon.style.opacity = entry.alpha.toString();
-      }
-      
-      this.timelineContainer.appendChild(timelineIcon);
-    }
-  }
-
-  private resetResources(): void {
-    this.concentration = 0;
-    this.courroux = 0;
-    this.puissance = 0;
-    this.preparation = 0;
-    this.egare = false;
-    this.pendingPreparationLoss = false;
-    this.preparationLossCaster = null;
-    this.preparationLossSpell = null;
-    this.timelineEntries = [];
-    this.updateTimeline();
   }
 
   private updateUI(): void {
     // Update Concentration
-    if (this.concentrationFill) {
+    const concentrationFill = document.getElementById('concentration-fill');
+    const concentrationValue = document.getElementById('concentration-value');
+    if (concentrationFill) {
       const percentage = Math.min((this.concentration / 100) * 100, 100);
-      this.concentrationFill.style.width = `${percentage}%`;
+      concentrationFill.style.width = `${percentage}%`;
     }
-    if (this.concentrationText) {
-      this.concentrationText.textContent = `${this.concentration}/100`;
-    }
-    
-    // Update Courroux
-    if (this.courrouxSection && this.courrouxCounter) {
-      if (this.courroux > 0) {
-        this.courrouxSection.style.display = 'flex';
-        this.courrouxCounter.textContent = this.courroux.toString();
-      } else {
-        this.courrouxSection.style.display = 'none';
-      }
+    if (concentrationValue) {
+      concentrationValue.textContent = this.concentration.toString();
     }
     
-    // Update Puissance
-    if (this.puissanceSection) {
-      const barsToShow = Math.min(5, Math.floor(this.puissance / 10));
-      if (barsToShow > 0) {
-        this.puissanceSection.style.display = 'flex';
-        for (let i = 0; i < 5; i++) {
-          const bar = document.getElementById(`puissance-bar-${i}`);
-          if (bar) {
-            if (i < barsToShow) {
-              bar.classList.add('active');
-            } else {
-              bar.classList.remove('active');
-            }
-          }
-        }
-      } else {
-        this.puissanceSection.style.display = 'none';
-      }
+    // Update Courroux stacks
+    const courrouxStacks = document.getElementById('courroux-stacks');
+    if (courrouxStacks) {
+      courrouxStacks.textContent = this.courroux > 0 ? `Courroux: ${this.courroux}/4` : '';
     }
     
-    // Update Égaré
-    if (this.egareSection && this.egareIcon) {
+    // Update Puissance stacks
+    const puissanceStacks = document.getElementById('puissance-stacks');
+    if (puissanceStacks) {
+      puissanceStacks.textContent = this.puissance > 0 ? `Puissance: ${this.puissance}/50` : '';
+    }
+    
+    // Update Préparation stacks
+    const preparationStacks = document.getElementById('preparation-stacks');
+    if (preparationStacks) {
+      preparationStacks.textContent = this.preparation > 0 ? `Préparation: ${this.preparation}` : '';
+    }
+    
+    // Update Égaré indicator
+    const egareIndicator = document.getElementById('egare-indicator');
+    if (egareIndicator) {
       if (this.egare && this.inCombat) {
-        this.egareSection.style.display = 'flex';
-        this.egareIcon.classList.add('visible');
+        egareIndicator.style.display = 'block';
+        egareIndicator.textContent = 'Égaré actif';
       } else {
-        this.egareIcon.classList.remove('visible');
-        if (!this.egare) {
-          this.egareSection.style.display = 'none';
-        }
-      }
-    }
-    
-    // Update Préparation
-    if (this.preparationSection && this.preparationCounter) {
-      if (this.preparation > 0 && this.inCombat) {
-        this.preparationSection.style.display = 'flex';
-        this.preparationCounter.textContent = this.preparation.toString();
-      } else {
-        this.preparationSection.style.display = 'none';
+        egareIndicator.style.display = 'none';
       }
     }
   }
@@ -370,4 +288,3 @@ class IopBoostsTracker {
 document.addEventListener('DOMContentLoaded', () => {
   new IopBoostsTracker();
 });
-

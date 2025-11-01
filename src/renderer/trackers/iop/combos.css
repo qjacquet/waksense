@@ -57,7 +57,7 @@ html, body {
 /* Combo Column */
 .combo-column {
   width: 40px;
-  min-height: 160px;
+  min-height: 175px;
   background: rgba(30, 30, 30, 150);
   border: 1px solid rgba(100, 100, 100, 100);
   border-radius: 5px;
@@ -115,7 +115,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: bold;
   color: white;
   text-shadow: 

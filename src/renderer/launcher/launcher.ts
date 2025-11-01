@@ -237,14 +237,23 @@ class LauncherUI {
         return;
       }
 
-      // Lancer le tracker
-      const trackerId = await window.electronAPI.createTracker(className, playerName);
+      // Lancer le tracker (toggle)
+      const result = await window.electronAPI.createTracker(className, playerName);
+      
+      // Parser le résultat pour obtenir l'état (visible ou caché)
+      // Format: "trackerId:true" ou "trackerId:false" ou "trackerId1,trackerId2:true" pour Iop
+      const parts = result.split(':');
+      const isVisible = parts.length > 1 ? parts[parts.length - 1] === 'true' : true;
 
-      // Marquer le bouton comme actif
-      classButton.isActive = true;
+      // Mettre à jour l'état actif selon la visibilité
+      classButton.isActive = isVisible;
       const buttonElement = document.querySelector(`#button-${buttonKey} .class-button`) as HTMLButtonElement;
       if (buttonElement) {
-        buttonElement.classList.add('active');
+        if (isVisible) {
+          buttonElement.classList.add('active');
+        } else {
+          buttonElement.classList.remove('active');
+        }
       }
     } catch (error) {
       console.error('Error launching tracker:', error);
