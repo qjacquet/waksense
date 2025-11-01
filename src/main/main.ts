@@ -351,13 +351,15 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
     const boostsExists = WindowManager.hasWindow(boostsTrackerId);
     const combosExists = WindowManager.hasWindow(combosTrackerId);
     
-    // Si les deux existent, déterminer l'état actuel et toggle les deux ensemble
-    if (boostsExists && combosExists) {
-      const boostsWindow = WindowManager.getWindow(boostsTrackerId);
+    // Si combosWindow existe (il est toujours créé), on peut faire le toggle
+    // Même si boostsWindow n'existe pas, on doit pouvoir toggle combosWindow
+    if (combosExists) {
+      const boostsWindow = boostsExists ? WindowManager.getWindow(boostsTrackerId) : undefined;
       const combosWindow = WindowManager.getWindow(combosTrackerId);
-      const isCurrentlyVisible = boostsWindow?.isVisible() || false;
+      // Vérifier la visibilité en utilisant combosWindow (puisque boosts peut ne pas exister)
+      const isCurrentlyVisible = combosWindow?.isVisible() || (boostsWindow?.isVisible() ?? false);
       
-      // Toggle les deux fenêtres ensemble
+      // Toggle les fenêtres ensemble (ou juste combos si boosts n'existe pas)
       if (isCurrentlyVisible) {
         boostsWindow?.hide();
         combosWindow?.hide();
@@ -384,14 +386,14 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
       }
     } else if (combosExists) {
       combosWindow = WindowManager.getWindow(combosTrackerId);
-      boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+      // boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
       // Afficher la fenêtre manquante si la fenêtre existante est visible
       if (combosWindow?.isVisible()) {
-        boostsWindow?.show();
+        // boostsWindow?.show();
       }
     } else {
       // Créer les deux fenêtres
-      boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+      // boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
       combosWindow = createIopTracker(combosTrackerId, 'combos.html', 240, 180, 'IOP COMBOS');
     }
     
@@ -408,7 +410,9 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
     }
 
     // Vérifier si les fenêtres sont visibles pour retourner l'état
-    const isVisible = boostsWindow && !boostsWindow.isDestroyed() && boostsWindow.isVisible();
+    // Utiliser combosWindow comme référence principale puisqu'il est toujours créé
+    const isVisible = combosWindow && !combosWindow.isDestroyed() && combosWindow.isVisible() || 
+                      (boostsWindow && !boostsWindow.isDestroyed() && boostsWindow.isVisible());
     return `${boostsTrackerId},${combosTrackerId}:${isVisible}`;
   }
 

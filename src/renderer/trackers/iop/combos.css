@@ -18,7 +18,6 @@ html, body {
 .tracker-container {
   width: 100%;
   min-height: 100%;
-  padding: 10px;
   background: transparent;
   -webkit-app-region: drag;
   position: relative;
@@ -45,11 +44,9 @@ html, body {
   gap: 5px;
   align-items: flex-start;
   justify-content: center;
-  -webkit-app-region: no-drag;
+  user-select: none;
   position: relative;
   z-index: 2;
-  /* Permettre le drag autour des colonnes */
-  padding: 5px;
   margin: 0 auto;
   pointer-events: auto;
 }
@@ -57,7 +54,6 @@ html, body {
 /* Combo Column */
 .combo-column {
   width: 40px;
-  min-height: 175px;
   background: rgba(30, 30, 30, 150);
   border: 1px solid rgba(100, 100, 100, 100);
   border-radius: 5px;
@@ -67,7 +63,6 @@ html, body {
   gap: 2px;
   align-items: center;
   transition: all 0.2s ease;
-  -webkit-app-region: no-drag;
 }
 
 .combo-column.ready-to-complete {
