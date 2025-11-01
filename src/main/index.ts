@@ -101,9 +101,7 @@ app.whenReady().then(() => {
     launcherWindow.webContents.once('did-finish-load', () => {
       // Envoyer les classes déjà détectées au launcher
       const alreadyDetected = Array.from(detectedClasses.values());
-      console.log(`[MAIN] Sending ${alreadyDetected.length} already detected classes to launcher`);
       for (const detection of alreadyDetected) {
-        console.log(`[MAIN] Sending class detection: ${detection.className} - ${detection.playerName}`);
         WindowManager.safeSendToWindow(launcherWindow, 'class-detected', detection);
       }
       

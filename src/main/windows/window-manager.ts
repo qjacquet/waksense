@@ -166,11 +166,10 @@ export class WindowManager {
    * Configure le logging console pour une fenêtre
    */
   private static setupWindowConsoleLogging(window: BrowserWindow, rendererName?: string): void {
-    if (rendererName) {
-      window.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        console.log(`[${rendererName} RENDERER ${level}]: ${message} (${sourceId}:${line})`);
-      });
-    }
+    const logPrefix = rendererName || 'TRACKER';
+    window.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`[${logPrefix} RENDERER ${level}]: ${message} (${sourceId}:${line})`);
+    });
 
     window.webContents.once('did-finish-load', () => {
       window.show();

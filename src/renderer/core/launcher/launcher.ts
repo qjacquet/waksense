@@ -99,12 +99,9 @@ class LauncherUI {
     }
     
     try {
-      console.log('[LAUNCHER] Setting up onClassDetected listener');
       window.electronAPI.onClassDetected((detection: { className: string; playerName: string }) => {
-        console.log('[LAUNCHER] Class detected event received:', detection);
         this.onClassDetected(detection.className as ClassType, detection.playerName);
       });
-      console.log('[LAUNCHER] Event listener attached successfully');
     } catch (error) {
       console.error('Error attaching event listeners:', error);
     }
@@ -133,16 +130,11 @@ class LauncherUI {
       await window.electronAPI.startMonitoring();
       
       const alreadyDetected = await window.electronAPI.getDetectedClasses();
-      console.log('[LAUNCHER] Already detected classes:', alreadyDetected);
       
       if (alreadyDetected && alreadyDetected.length > 0) {
-        console.log(`[LAUNCHER] Loading ${alreadyDetected.length} already detected classes`);
         for (const detection of alreadyDetected) {
-          console.log(`[LAUNCHER] Loading class: ${detection.className} - ${detection.playerName}`);
           this.onClassDetected(detection.className as ClassType, detection.playerName);
         }
-      } else {
-        console.log('[LAUNCHER] No classes already detected');
       }
       
       this.updateStatus('📡 Surveillance des logs prête...', 'info');
@@ -153,16 +145,13 @@ class LauncherUI {
   }
 
   private onClassDetected(className: ClassType, playerName: string): void {
-    console.log(`[LAUNCHER] onClassDetected called: ${className} - ${playerName}`);
     const buttonKey = `${className}_${playerName}`;
     
     if (this.classButtons.has(buttonKey)) {
-      console.log(`[LAUNCHER] Button already exists for ${buttonKey}, skipping`);
       return;
     }
 
     const isSaved = this.savedCharacters[className]?.includes(playerName) || false;
-    console.log(`[LAUNCHER] Adding button for ${className} - ${playerName} (saved: ${isSaved})`);
 
     this.addClassButton(className, playerName, isSaved);
 

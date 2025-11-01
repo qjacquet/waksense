@@ -75,25 +75,17 @@ export function setupTrackerEventListeners(
   onCombatStarted?: () => void
 ): void {
   if (!window.electronAPI) {
-    console.error('[UI-HELPERS] window.electronAPI is not available!');
-    console.error('[UI-HELPERS] Available keys:', Object.keys(window));
     return;
   }
 
-  console.log('[UI-HELPERS] Setting up tracker event listeners');
   window.electronAPI.onLogLine(onLogLine);
-  console.log('[UI-HELPERS] onLogLine listener registered');
 
   if (onCombatEnded) {
     window.electronAPI.onCombatEnded(onCombatEnded);
-    console.log('[UI-HELPERS] onCombatEnded listener registered');
   }
 
   if (onCombatStarted) {
     window.electronAPI.onCombatStarted(onCombatStarted);
-    console.log('[UI-HELPERS] onCombatStarted listener registered');
   }
-  
-  console.log('[UI-HELPERS] All event listeners registered');
 }
 

@@ -81,6 +81,10 @@ class OuginakTracker {
   ]);
 
   constructor() {
+    if (!window.electronAPI) {
+      return;
+    }
+    
     this.setupEventListeners();
     this.updateUI();
     this.updateTimeline();
