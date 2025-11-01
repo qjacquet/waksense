@@ -1,0 +1,272 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  -webkit-app-region: drag; /* Permet de déplacer la fenêtre */
+}
+
+.tracker-container {
+  width: 100%;
+  min-height: 100%;
+  padding: 5px;
+  background: transparent;
+  -webkit-app-region: drag;
+  position: relative;
+}
+
+/* Concentration Section */
+.concentration-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.concentration-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64b5f6;
+  font-weight: bold;
+  background: transparent;
+  -webkit-app-region: no-drag;
+}
+
+.concentration-bar-container {
+  flex: 1;
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+
+.concentration-bar {
+  width: 250px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.77);
+  border-radius: 10px;
+  border: 2px solid rgba(51, 51, 51, 1);
+  position: relative;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+.concentration-fill {
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(64, 181, 246, 0.8) 0%, 
+    rgba(33, 150, 243, 1) 50%,
+    rgba(0, 188, 212, 1) 100%);
+  border-radius: 10px;
+  transition: width 0.12s ease;
+}
+
+.concentration-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 0 3px #000;
+  z-index: 10;
+}
+
+/* Courroux Section */
+.courroux-section {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.courroux-icon {
+  width: 35px;
+  height: 35px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff6b35;
+  font-weight: bold;
+  background: transparent;
+}
+
+.courroux-counter {
+  width: 35px;
+  height: 35px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 0 3px #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+}
+
+/* Puissance Bars */
+.puissance-section {
+  position: absolute;
+  top: -15px;
+  left: 0;
+  display: flex;
+  gap: 5px;
+  -webkit-app-region: no-drag;
+}
+
+.puissance-bars-container {
+  display: flex;
+  gap: 5px;
+}
+
+.puissance-bar {
+  width: 30px;
+  height: 6px;
+  background: rgba(255, 255, 255, 30);
+  border: 1px solid rgba(255, 255, 255, 50);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.puissance-bar.active {
+  background: rgba(100, 200, 255, 200);
+  border: 1px solid rgba(150, 220, 255, 255);
+}
+
+/* Égaré Icon */
+.egare-section {
+  position: absolute;
+  top: -50px;
+  left: 0;
+  -webkit-app-region: no-drag;
+}
+
+.egare-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff6b35;
+  font-weight: bold;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.egare-icon.visible {
+  opacity: 1;
+}
+
+/* Préparation Section */
+.preparation-section {
+  position: absolute;
+  top: 0;
+  right: -290px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.preparation-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff9800;
+  font-weight: bold;
+  background: transparent;
+}
+
+.preparation-counter {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 0 3px #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+}
+
+/* Timeline Container */
+.timeline-container {
+  margin-top: 30px;
+  display: flex;
+  gap: 0;
+  -webkit-app-region: no-drag;
+}
+
+.timeline-icon {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  background: transparent;
+}
+
+.timeline-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.timeline-cost {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  white-space: nowrap;
+}
+

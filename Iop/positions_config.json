@@ -1,7 +1,7 @@
 {
   "concentration_bar": {
-    "x": 824,
-    "y": 808
+    "x": 404,
+    "y": 614
   },
   "positions_locked": false,
   "preparation_icon": {
@@ -9,7 +9,7 @@
     "y": 705
   },
   "combo_group": {
-    "x": 994,
-    "y": 33
+    "x": 368,
+    "y": 431
   }
 }

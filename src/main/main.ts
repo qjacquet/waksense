@@ -308,6 +308,83 @@ function stopLogMonitoring(): void {
 
 // Gestion IPC pour créer des trackers
 ipcMain.handle('create-tracker', (_event, className: string, playerName: string) => {
+  // Pour Iop, créer deux fenêtres séparées : boosts et combos
+  if (className.toLowerCase() === 'iop') {
+    const boostsTrackerId = `tracker-${className}-${playerName}-boosts`;
+    const combosTrackerId = `tracker-${className}-${playerName}-combos`;
+
+    // Créer le tracker Boosts
+    if (!WindowManager.hasWindow(boostsTrackerId)) {
+      const boostsWindow = WindowManager.createOverlayWindow(boostsTrackerId, {
+        width: 280,
+        height: 200,
+        transparent: true,
+        alwaysOnTop: true,
+        resizable: true,
+        frame: false
+      });
+
+      const boostsHtmlPath = path.join(__dirname, '..', 'renderer', 'trackers', 'iop', 'boosts.html');
+      boostsWindow.loadFile(boostsHtmlPath);
+
+      boostsWindow.webContents.once('did-finish-load', () => {
+        boostsWindow.show();
+      });
+
+      boostsWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[IOP BOOSTS RENDERER ${level}]: ${message} (${sourceId}:${line})`);
+      });
+
+      boostsWindow.on('closed', () => {
+        WindowManager.closeWindow(boostsTrackerId);
+      });
+    } else {
+      const existingWindow = WindowManager.getWindow(boostsTrackerId);
+      existingWindow?.show();
+      existingWindow?.focus();
+    }
+
+    // Créer le tracker Combos
+    if (!WindowManager.hasWindow(combosTrackerId)) {
+      const combosWindow = WindowManager.createOverlayWindow(combosTrackerId, {
+        width: 240,
+        height: 180,
+        transparent: true,
+        alwaysOnTop: true,
+        resizable: true,
+        frame: false
+      });
+
+      const combosHtmlPath = path.join(__dirname, '..', 'renderer', 'trackers', 'iop', 'combos.html');
+      combosWindow.loadFile(combosHtmlPath);
+
+      combosWindow.webContents.once('did-finish-load', () => {
+        combosWindow.show();
+      });
+
+      combosWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        console.log(`[IOP COMBOS RENDERER ${level}]: ${message} (${sourceId}:${line})`);
+      });
+
+      combosWindow.on('closed', () => {
+        WindowManager.closeWindow(combosTrackerId);
+      });
+    } else {
+      const existingWindow = WindowManager.getWindow(combosTrackerId);
+      existingWindow?.show();
+      existingWindow?.focus();
+    }
+
+    // Démarrer la surveillance des logs si ce n'est pas déjà fait
+    if (!logMonitor) {
+      const logPath = Config.getLogPath() || Config.getDefaultLogPath();
+      startLogMonitoring(Config.getLogFilePath(logPath));
+    }
+
+    return `${boostsTrackerId},${combosTrackerId}`;
+  }
+
+  // Pour les autres classes (Cra, Ouginak), créer une seule fenêtre
   const trackerId = `tracker-${className}-${playerName}`;
 
   // Vérifier si le tracker existe déjà

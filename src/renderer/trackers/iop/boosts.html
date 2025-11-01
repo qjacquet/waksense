@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iop Boosts Tracker</title>
+  <link rel="stylesheet" href="boosts.css">
+</head>
+<body>
+  <div class="tracker-container" id="tracker-container">
+    <!-- Concentration Bar -->
+    <div class="concentration-section">
+      <div class="concentration-icon" id="concentration-icon">🧠</div>
+      <div class="concentration-bar-container">
+        <div class="concentration-bar" id="concentration-bar">
+          <div class="concentration-fill" id="concentration-fill" style="width: 0%"></div>
+          <div class="concentration-text" id="concentration-text">0/100</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courroux Icon and Counter -->
+    <div class="courroux-section" id="courroux-section" style="display: none;">
+      <div class="courroux-icon" id="courroux-icon">⚡</div>
+      <div class="courroux-counter" id="courroux-counter">0</div>
+    </div>
+
+    <!-- Puissance Bars (5 small bars) -->
+    <div class="puissance-section" id="puissance-section" style="display: none;">
+      <div class="puissance-bars-container">
+        <div class="puissance-bar" id="puissance-bar-0"></div>
+        <div class="puissance-bar" id="puissance-bar-1"></div>
+        <div class="puissance-bar" id="puissance-bar-2"></div>
+        <div class="puissance-bar" id="puissance-bar-3"></div>
+        <div class="puissance-bar" id="puissance-bar-4"></div>
+      </div>
+    </div>
+
+    <!-- Égaré Icon -->
+    <div class="egare-section" id="egare-section" style="display: none;">
+      <div class="egare-icon" id="egare-icon">🔥</div>
+    </div>
+
+    <!-- Préparation Icon and Counter -->
+    <div class="preparation-section" id="preparation-section" style="display: none;">
+      <div class="preparation-icon" id="preparation-icon">📋</div>
+      <div class="preparation-counter" id="preparation-counter">0</div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-container" id="timeline-container">
+      <!-- Timeline icons will be added here dynamically -->
+    </div>
+  </div>
+  <script src="boosts.js"></script>
+</body>
+</html>
+

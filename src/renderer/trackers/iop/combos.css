@@ -1,0 +1,162 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  -webkit-app-region: drag; /* Permet de déplacer la fenêtre */
+}
+
+.tracker-container {
+  width: 100%;
+  min-height: 100%;
+  padding: 10px;
+  background: transparent;
+  -webkit-app-region: drag;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Drag zone wrapper around combos - permet le drag dans les zones vides */
+.drag-zone {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  -webkit-app-region: drag;
+  z-index: 0;
+}
+
+/* Combos Container */
+.combos-container {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 2;
+  /* Permettre le drag autour des colonnes */
+  padding: 5px;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+/* Combo Column */
+.combo-column {
+  width: 40px;
+  min-height: 160px;
+  background: rgba(30, 30, 30, 150);
+  border: 1px solid rgba(100, 100, 100, 100);
+  border-radius: 5px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+}
+
+.combo-column.ready-to-complete {
+  background: rgba(30, 30, 30, 200);
+  border: 2px solid rgba(255, 215, 0, 200);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    background: rgba(30, 30, 30, 150);
+    border-color: rgba(255, 215, 0, 200);
+  }
+  50% {
+    background: rgba(30, 30, 30, 255);
+    border-color: rgba(255, 215, 0, 255);
+  }
+}
+
+/* Combo Icon */
+.combo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 3px;
+  background: rgba(50, 50, 50, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.combo-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Combo Step */
+.combo-step {
+  width: 32px;
+  height: 32px;
+  background: rgba(50, 50, 50, 100);
+  border: 1px solid rgba(100, 100, 100, 150);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+  transition: all 0.2s ease;
+  opacity: 1;
+}
+
+.combo-step.completed {
+  background: rgba(0, 200, 0, 200);
+  border: 2px solid rgba(0, 255, 0, 255);
+}
+
+.combo-step.next-step {
+  background: rgba(255, 165, 0, 200);
+  border: 2px solid rgba(255, 200, 0, 255);
+}
+
+.combo-step.future {
+  background: rgba(50, 50, 50, 100);
+  border: 1px solid rgba(100, 100, 100, 150);
+}
+
+.combo-step.animating-out {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Resource type colors */
+.combo-step.pa {
+  color: #0096ff; /* Bright blue for PA */
+}
+
+.combo-step.pm {
+  color: #00c853; /* Green for PM */
+}
+
+.combo-step.pw {
+  color: #00ced1; /* Turquoise for PW */
+}
+

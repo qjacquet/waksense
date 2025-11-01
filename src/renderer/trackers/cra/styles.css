@@ -14,7 +14,7 @@ body {
 
 .tracker-container {
   width: 320px;
-  min-height: 70px;
+  min-height: 120px;
   padding: 5px;
   background: rgba(10, 10, 10, 0.85);
   border-radius: 8px;
@@ -62,13 +62,19 @@ body {
   z-index: 1;
 }
 
+/* Affûtage bar - yellow */
+.affutage-bar .bar-fill {
+  background: linear-gradient(90deg, #ffd700 0%, #ffb300 100%);
+}
+
+/* Précision bar - orange */
 .precision-bar .bar-fill {
   background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
 }
 
 .bar-value {
   position: absolute;
-  right: 5px;
+  right: 45px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 10px;
@@ -78,3 +84,47 @@ body {
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+.bar-max {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 2;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.stacks-container {
+  display: flex;
+  gap: 10px;
+  padding: 2px 5px;
+  font-size: 10px;
+  color: #ffd700;
+  font-weight: bold;
+  /* Désactiver le drag pour permettre les interactions */
+  -webkit-app-region: no-drag;
+}
+
+.stack-indicator {
+  background: rgba(255, 215, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.tir-precis-indicator {
+  display: none;
+  padding: 4px 8px;
+  background: rgba(74, 158, 255, 0.3);
+  border: 1px solid rgba(74, 158, 255, 0.6);
+  border-radius: 4px;
+  color: #4a9eff;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 3px;
+  /* Désactiver le drag pour permettre les interactions */
+  -webkit-app-region: no-drag;
+}
