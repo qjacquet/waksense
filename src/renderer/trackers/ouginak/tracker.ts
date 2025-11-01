@@ -2,6 +2,8 @@
  * Ouginak Tracker - Suivi des ressources Ouginak en temps réel
  */
 
+import { setupTrackerEventListeners, updateProgressBar } from '../../shared/ui-helpers';
+
 class OuginakTracker {
   private rage: number = 0;
 
@@ -11,13 +13,12 @@ class OuginakTracker {
   }
 
   private setupEventListeners(): void {
-    window.electronAPI.onLogLine((line: string, parsed: any) => {
+    setupTrackerEventListeners((line: string, parsed: any) => {
       this.processLogLine(line, parsed);
     });
   }
 
   private processLogLine(line: string, parsed: any): void {
-    // Parser les lignes pour détecter les changements de Rage
     if (line.includes('Rage') || line.includes('rage')) {
       this.parseRage(line);
     }
@@ -32,17 +33,7 @@ class OuginakTracker {
   }
 
   private updateUI(): void {
-    const fill = document.getElementById('rage-fill');
-    const value = document.getElementById('rage-value');
-
-    if (fill) {
-      const percentage = (this.rage / 30) * 100;
-      fill.style.width = `${percentage}%`;
-    }
-
-    if (value) {
-      value.textContent = `${this.rage}/30`;
-    }
+    updateProgressBar('rage-fill', 'rage-value', this.rage, 30, (current, max) => `${current}/${max}`);
   }
 }
 

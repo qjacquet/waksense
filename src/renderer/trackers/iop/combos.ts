@@ -183,8 +183,6 @@ class IopCombosTracker {
         const combo = this.comboDefinitions.find(c => c.name === comboName)!;
         if (progress.currentStep >= combo.steps.length) {
           this.completedCombosThisTurn.add(comboName);
-          console.log(`[IOP COMBOS] Combo '${comboName}' COMPLETED!`);
-          // Reset immediately to allow redoing
           progress.currentStep = 0;
         } else {
           progress.isReadyToComplete = (progress.currentStep === combo.steps.length - 1);
@@ -213,7 +211,6 @@ class IopCombosTracker {
           const progress = this.comboProgress.get(combo.name)!;
           progress.currentStep = 1;
           progress.isReadyToComplete = (progress.currentStep === combo.steps.length - 1);
-          console.log(`[IOP COMBOS] Combo '${combo.name}' started with ${compactCost}`);
           break;
         }
       }
@@ -232,7 +229,6 @@ class IopCombosTracker {
     }
     this.currentTurnSpells = [];
     this.completedCombosThisTurn.clear();
-    console.log('[IOP COMBOS] All combos reset');
   }
 
   private updateUI(): void {

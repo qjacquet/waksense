@@ -2,6 +2,8 @@
  * Cra Tracker - Suivi des ressources Cra en temps réel
  */
 
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../shared/ui-helpers';
+
 class CraTracker {
   private affutage: number = 0;
   private precision: number = 0;
@@ -19,13 +21,10 @@ class CraTracker {
   }
 
   private setupEventListeners(): void {
-    window.electronAPI.onLogLine((line: string, parsed: any) => {
-      this.processLogLine(line, parsed);
-    });
-    
-    window.electronAPI.onCombatEnded(() => {
-      this.resetResources();
-    });
+    setupTrackerEventListeners(
+      (line: string, parsed: any) => this.processLogLine(line, parsed),
+      () => this.resetResources()
+    );
   }
 
   private resetResources(): void {
@@ -241,52 +240,17 @@ class CraTracker {
   }
 
   private updateUI(): void {
-    // Update Affûtage
-    const affutageFill = document.getElementById('affutage-fill');
-    const affutageValue = document.getElementById('affutage-value');
-    if (affutageFill) {
-      const percentage = Math.min((this.affutage / 100) * 100, 100);
-      affutageFill.style.width = `${percentage}%`;
-    }
-    if (affutageValue) {
-      affutageValue.textContent = this.affutage.toString();
-    }
+    updateProgressBar('affutage-fill', 'affutage-value', this.affutage, 100);
+    updateProgressBar('precision-fill', 'precision-value', this.precision, this.precisionMax);
     
-    // Update Précision
-    const precisionFill = document.getElementById('precision-fill');
-    const precisionValue = document.getElementById('precision-value');
     const precisionMax = document.getElementById('precision-max');
-    if (precisionFill) {
-      const percentage = Math.min((this.precision / this.precisionMax) * 100, 100);
-      precisionFill.style.width = `${percentage}%`;
-    }
-    if (precisionValue) {
-      precisionValue.textContent = this.precision.toString();
-    }
     if (precisionMax) {
       precisionMax.textContent = `/ ${this.precisionMax}`;
     }
     
-    // Update Stacks
-    const pointeStacks = document.getElementById('pointe-stacks');
-    const baliseStacks = document.getElementById('balise-stacks');
-    if (pointeStacks) {
-      pointeStacks.textContent = this.pointeAffuteeStacks > 0 ? `Pointe: ${this.pointeAffuteeStacks}/3` : '';
-    }
-    if (baliseStacks) {
-      baliseStacks.textContent = this.baliseAffuteeStacks > 0 ? `Balise: ${this.baliseAffuteeStacks}/3` : '';
-    }
-    
-    // Update Tir précis indicator
-    const tirPrecisIndicator = document.getElementById('tir-precis-indicator');
-    if (tirPrecisIndicator) {
-      if (this.tirPrecisActive) {
-        tirPrecisIndicator.style.display = 'block';
-        tirPrecisIndicator.textContent = 'Tir précis actif';
-      } else {
-        tirPrecisIndicator.style.display = 'none';
-      }
-    }
+    updateStackIndicator('pointe-stacks', this.pointeAffuteeStacks, 3, 'Pointe');
+    updateStackIndicator('balise-stacks', this.baliseAffuteeStacks, 3, 'Balise');
+    updateBooleanIndicator('tir-precis-indicator', this.tirPrecisActive, 'Tir précis actif');
   }
 }
 

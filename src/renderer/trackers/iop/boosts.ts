@@ -3,6 +3,8 @@
  * Concentration, Courroux, Puissance, Préparation, Égaré
  */
 
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../shared/ui-helpers';
+
 class IopBoostsTracker {
   private concentration: number = 0;
   private courroux: number = 0;
@@ -23,18 +25,16 @@ class IopBoostsTracker {
   }
 
   private setupEventListeners(): void {
-    window.electronAPI.onLogLine((line: string, parsed: any) => {
-      this.processLogLine(line, parsed);
-    });
-    
-    window.electronAPI.onCombatStarted(() => {
-      this.inCombat = true;
-    });
-    
-    window.electronAPI.onCombatEnded(() => {
-      this.inCombat = false;
-      this.resetResources();
-    });
+    setupTrackerEventListeners(
+      (line: string, parsed: any) => this.processLogLine(line, parsed),
+      () => {
+        this.inCombat = false;
+        this.resetResources();
+      },
+      () => {
+        this.inCombat = true;
+      }
+    );
   }
 
   private resetResources(): void {
@@ -243,45 +243,16 @@ class IopBoostsTracker {
   }
 
   private updateUI(): void {
-    // Update Concentration
-    const concentrationFill = document.getElementById('concentration-fill');
-    const concentrationValue = document.getElementById('concentration-value');
-    if (concentrationFill) {
-      const percentage = Math.min((this.concentration / 100) * 100, 100);
-      concentrationFill.style.width = `${percentage}%`;
-    }
-    if (concentrationValue) {
-      concentrationValue.textContent = this.concentration.toString();
+    updateProgressBar('concentration-fill', 'concentration-value', this.concentration, 100);
+    updateStackIndicator('courroux-stacks', this.courroux, 4, 'Courroux');
+    updateStackIndicator('puissance-stacks', this.puissance, 50, 'Puissance');
+    
+    const prepElement = document.getElementById('preparation-stacks');
+    if (prepElement) {
+      prepElement.textContent = this.preparation > 0 ? `Préparation: ${this.preparation}` : '';
     }
     
-    // Update Courroux stacks
-    const courrouxStacks = document.getElementById('courroux-stacks');
-    if (courrouxStacks) {
-      courrouxStacks.textContent = this.courroux > 0 ? `Courroux: ${this.courroux}/4` : '';
-    }
-    
-    // Update Puissance stacks
-    const puissanceStacks = document.getElementById('puissance-stacks');
-    if (puissanceStacks) {
-      puissanceStacks.textContent = this.puissance > 0 ? `Puissance: ${this.puissance}/50` : '';
-    }
-    
-    // Update Préparation stacks
-    const preparationStacks = document.getElementById('preparation-stacks');
-    if (preparationStacks) {
-      preparationStacks.textContent = this.preparation > 0 ? `Préparation: ${this.preparation}` : '';
-    }
-    
-    // Update Égaré indicator
-    const egareIndicator = document.getElementById('egare-indicator');
-    if (egareIndicator) {
-      if (this.egare && this.inCombat) {
-        egareIndicator.style.display = 'block';
-        egareIndicator.textContent = 'Égaré actif';
-      } else {
-        egareIndicator.style.display = 'none';
-      }
-    }
+    updateBooleanIndicator('egare-indicator', this.egare && this.inCombat, 'Égaré actif');
   }
 }
 

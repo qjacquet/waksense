@@ -28,7 +28,6 @@ class LauncherUI {
       return;
     }
     
-    // Attacher les listeners EN PREMIER pour ne pas rater d'événements
     this.setupEventListeners();
     
     this.initializeUI();
@@ -37,13 +36,11 @@ class LauncherUI {
   }
 
   private initializeUI(): void {
-    // Bouton de sélection du chemin
     const selectPathBtn = document.getElementById('select-path-btn');
     if (selectPathBtn) {
       selectPathBtn.addEventListener('click', () => this.selectLogPath());
     }
 
-    // Charger le chemin actuel
     this.updateLogPath();
   }
 
@@ -64,7 +61,6 @@ class LauncherUI {
     try {
       const logsDir = await window.electronAPI.selectLogPath();
       if (logsDir) {
-        // Le monitoring est déjà démarré dans le handler IPC
         this.updateLogPath();
         this.updateStatus('✅ Chemin des logs configuré - Surveillance démarrée...', 'success');
       }
@@ -78,7 +74,6 @@ class LauncherUI {
     try {
       this.savedCharacters = await window.electronAPI.getSavedCharacters();
       
-      // Créer les boutons pour les personnages sauvegardés
       for (const [className, playerNames] of Object.entries(this.savedCharacters)) {
         for (const playerName of playerNames) {
           this.addClassButton(className as ClassType, playerName, true);
@@ -97,7 +92,6 @@ class LauncherUI {
   }
 
   private setupEventListeners(): void {
-    // Vérifier qu'ipcRenderer existe dans le preload (devrait être disponible via contextBridge)
     if (typeof window.electronAPI === 'undefined') {
       console.error('window.electronAPI is undefined! Preload might not be loaded.');
       alert('Erreur: window.electronAPI n\'est pas disponible. Vérifiez que le preload est chargé.');
@@ -105,7 +99,6 @@ class LauncherUI {
     }
     
     try {
-      // Écouter les détections de classes - ATTACHER LE LISTENER IMMÉDIATEMENT
       window.electronAPI.onClassDetected((detection: { className: string; playerName: string }) => {
         this.onClassDetected(detection.className as ClassType, detection.playerName);
       });
@@ -113,7 +106,6 @@ class LauncherUI {
       console.error('Error attaching event listeners:', error);
     }
 
-    // Écouter les événements de combat
     window.electronAPI.onCombatStarted(() => {
       this.updateStatus('⚔️ Combat démarré - Surveillance des classes...', 'info');
     });
@@ -122,7 +114,6 @@ class LauncherUI {
       this.updateStatus('✅ Combat terminé - Classes détectées:', 'info');
     });
 
-    // Écouter les événements de monitoring
     window.electronAPI.onMonitoringStarted(() => {
       this.updateStatus('✅ Surveillance des logs activée automatiquement', 'success');
     });
@@ -134,15 +125,10 @@ class LauncherUI {
 
   private async startMonitoring(): Promise<void> {
     try {
-      // Le monitoring devrait déjà être démarré automatiquement au démarrage
-      // Si ce n'est pas le cas, on peut le démarrer manuellement
-      // Mais normalement, le main process l'a déjà fait si le fichier existe
       const logPath = await window.electronAPI.getLogPath();
       
-      // Essayer de démarrer le monitoring (il ne fera rien si déjà démarré)
       await window.electronAPI.startMonitoring();
       
-      // IMPORTANT: Récupérer les classes déjà détectées (qui peuvent avoir été détectées avant que le listener soit attaché)
       const alreadyDetected = await window.electronAPI.getDetectedClasses();
       
       if (alreadyDetected && alreadyDetected.length > 0) {
@@ -151,8 +137,6 @@ class LauncherUI {
         }
       }
       
-      // Le statut sera mis à jour par les événements de combat ou de détection
-      // Pour l'instant, on affiche juste que la surveillance est prête
       this.updateStatus('📡 Surveillance des logs prête...', 'info');
     } catch (error) {
       console.error('Error starting monitoring:', error);
@@ -163,18 +147,14 @@ class LauncherUI {
   private onClassDetected(className: ClassType, playerName: string): void {
     const buttonKey = `${className}_${playerName}`;
     
-    // Vérifier si le bouton existe déjà
     if (this.classButtons.has(buttonKey)) {
       return;
     }
 
-    // Vérifier si le personnage est sauvegardé
     const isSaved = this.savedCharacters[className]?.includes(playerName) || false;
 
-    // Ajouter le bouton
     this.addClassButton(className, playerName, isSaved);
 
-    // Mettre à jour le statut
     if (isSaved) {
       this.updateStatus(`✅ Personnage sauvegardé détecté: ${className} (${playerName})`, 'success');
     } else {
@@ -202,7 +182,6 @@ class LauncherUI {
 
     this.classButtons.set(buttonKey, classButton);
 
-    // Créer l'élément HTML
     const buttonRow = document.createElement('div');
     buttonRow.className = 'class-button-row';
     buttonRow.id = `button-${buttonKey}`;
@@ -214,7 +193,6 @@ class LauncherUI {
 
     buttonRow.appendChild(button);
 
-    // Ajouter le bouton de suppression si sauvegardé
     if (isSaved) {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'delete-btn';
@@ -237,15 +215,11 @@ class LauncherUI {
         return;
       }
 
-      // Lancer le tracker (toggle)
       const result = await window.electronAPI.createTracker(className, playerName);
       
-      // Parser le résultat pour obtenir l'état (visible ou caché)
-      // Format: "trackerId:true" ou "trackerId:false" ou "trackerId1,trackerId2:true" pour Iop
       const parts = result.split(':');
       const isVisible = parts.length > 1 ? parts[parts.length - 1] === 'true' : true;
 
-      // Mettre à jour l'état actif selon la visibilité
       classButton.isActive = isVisible;
       const buttonElement = document.querySelector(`#button-${buttonKey} .class-button`) as HTMLButtonElement;
       if (buttonElement) {
@@ -305,7 +279,6 @@ class LauncherUI {
 
     statusLabel.textContent = message;
 
-    // Mettre à jour les styles selon le type
     statusLabel.className = 'status-label';
     switch (type) {
       case 'success':
@@ -326,7 +299,6 @@ class LauncherUI {
   }
 }
 
-// Initialiser l'interface quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', () => {
   new LauncherUI();
 });
