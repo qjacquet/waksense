@@ -3,6 +3,8 @@
  * Concentration, Courroux, Puissance, Préparation, Égaré
  */
 
+import { IOP_SPELL_COST_MAP, IOP_SPELL_ICON_MAP } from '../../../shared/iop-spell-data';
+
 class IopBoostsTracker {
   private concentration: number = 0;
   private courroux: number = 0;
@@ -115,7 +117,6 @@ class IopBoostsTracker {
         this.concentration = concentrationValue % 100;
         if (this.egare) {
           this.egare = false;
-          console.log('[IOP BOOSTS] Égaré removed due to Concentration overflow');
         }
       } else {
         this.concentration = concentrationValue;
@@ -128,21 +129,18 @@ class IopBoostsTracker {
     if (courrouxGainMatch) {
       const courrouxTotal = parseInt(courrouxGainMatch[1], 10);
       this.courroux = Math.min(courrouxTotal, 4);
-      console.log(`[IOP BOOSTS] Courroux gained: ${this.courroux}`);
     }
     
     if (line.includes("n'est plus sous l'emprise de 'Courroux' (Compulsion)")) {
       const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
       if (playerMatch && playerMatch[1] === this.trackedPlayerName) {
         this.courroux = 0;
-        console.log('[IOP BOOSTS] Courroux lost');
       }
     }
     
     // Check for Courroux loss from damage
     if (line.includes('(Courroux)') && line.includes('PV')) {
       this.courroux = 0;
-      console.log('[IOP BOOSTS] Courroux lost due to Courroux damage');
     }
   }
 
@@ -151,14 +149,12 @@ class IopBoostsTracker {
     if (puissanceMatch) {
       const puissanceValue = parseInt(puissanceMatch[1], 10);
       this.puissance = Math.min(puissanceValue, 50);
-      console.log(`[IOP BOOSTS] Puissance: ${this.puissance}`);
     }
     
     if (line.includes("n'est plus sous l'emprise de 'Puissance' (Iop isolé)")) {
       const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
       if (playerMatch && playerMatch[1] === this.trackedPlayerName) {
         this.puissance = Math.max(0, this.puissance - 10);
-        console.log(`[IOP BOOSTS] Puissance lost: ${this.puissance}`);
       }
     }
   }
@@ -168,7 +164,6 @@ class IopBoostsTracker {
     if (preparationGainMatch) {
       const preparationTotal = parseInt(preparationGainMatch[1], 10);
       this.preparation = preparationTotal;
-      console.log(`[IOP BOOSTS] Préparation gained: ${this.preparation}`);
     }
   }
 
@@ -179,7 +174,6 @@ class IopBoostsTracker {
     if (line.includes('reportée pour le tour suivant') || line.includes('reportées pour le tour suivant')) {
       if (this.egare) {
         this.egare = false;
-        console.log('[IOP BOOSTS] Égaré removed due to turn carryover');
       }
     }
   }
@@ -193,13 +187,11 @@ class IopBoostsTracker {
     if (!this.inCombat) {
       this.inCombat = true;
       this.puissance = 30;
-      console.log('[IOP BOOSTS] Combat started, Puissance initialized to 30');
     }
     
     // Handle Courroux loss spells
     if (['Super Iop Punch', 'Roknocerok', 'Tannée'].includes(spellCast.spellName)) {
       this.courroux = 0;
-      console.log(`[IOP BOOSTS] Courroux lost due to ${spellCast.spellName}`);
     }
     
     // Handle Préparation loss
@@ -207,17 +199,15 @@ class IopBoostsTracker {
       this.pendingPreparationLoss = true;
       this.preparationLossCaster = spellCast.playerName;
       this.preparationLossSpell = spellCast.spellName;
-      console.log(`[IOP BOOSTS] Préparation loss pending for ${spellCast.spellName}`);
     }
     
     // Handle Égaré gain spells
     if (['Fulgur', 'Colère de Iop'].includes(spellCast.spellName)) {
       this.egare = true;
-      console.log(`[IOP BOOSTS] Égaré gained via ${spellCast.spellName}`);
     }
     
     // Add to timeline (only if spell is known)
-    if (this.spellIconMap.has(spellCast.spellName)) {
+    if (IOP_SPELL_ICON_MAP.has(spellCast.spellName)) {
       this.addToTimeline(spellCast.spellName);
     }
   }
@@ -233,68 +223,16 @@ class IopBoostsTracker {
       this.pendingPreparationLoss = false;
       this.preparationLossCaster = null;
       this.preparationLossSpell = null;
-      console.log('[IOP BOOSTS] Préparation lost due to confirmed damage');
     }
   }
 
-  private spellIconMap: Map<string, string> = new Map([
-    ["Épée céleste", "epeeceleste.png"],
-    ["Fulgur", "fulgur.png"],
-    ["Super Iop Punch", "superioppunch.png"],
-    ["Jugement", "jugement.png"],
-    ["Colère de Iop", "colere.png"],
-    ["Ébranler", "ebranler.png"],
-    ["Roknocerok", "roknocerok.png"],
-    ["Fendoir", "fendoir.png"],
-    ["Ravage", "ravage.png"],
-    ["Jabs", "jabs.png"],
-    ["Rafale", "rafale.png"],
-    ["Torgnole", "torgnole.png"],
-    ["Tannée", "tannee.png"],
-    ["Épée de Iop", "Epeeduiop.png"],
-    ["Bond", "Bond.png"],
-    ["Focus", "Focus.png"],
-    ["Éventrail", "eventrail.png"],
-    ["Uppercut", "uppercut.png"],
-    ["Amplification", "Amplification.png"],
-    ["Duel", "Duel.png"],
-    ["Étendard de bravoure", "Etandard.png"],
-    ["Vertu", "Vertu.png"],
-    ["Charge", "charge.png"]
-  ]);
-
-  private spellCostMap: Map<string, string> = new Map([
-    ["Épée céleste", "2PA"],
-    ["Fulgur", "3PA"],
-    ["Super Iop Punch", "4PA"],
-    ["Jugement", "1PA"],
-    ["Colère de Iop", "6PA"],
-    ["Ébranler", "2PA"],
-    ["Roknocerok", "4PA"],
-    ["Fendoir", "3PA"],
-    ["Ravage", "5PA"],
-    ["Jabs", "3PA"],
-    ["Rafale", "1PA"],
-    ["Torgnole", "2PA"],
-    ["Tannée", "4PA"],
-    ["Épée de Iop", "3PA"],
-    ["Bond", "4PA"],
-    ["Focus", "2PA"],
-    ["Éventrail", "1PM"],
-    ["Uppercut", "1PW"],
-    ["Amplification", "2PM"],
-    ["Duel", "1PA"],
-    ["Étendard de bravoure", "3PA"],
-    ["Vertu", "2PA"],
-    ["Charge", "1PA"]
-  ]);
 
   private timelineEntries: Array<{spell: string; cost: string; icon: string; alpha: number; slide: number}> = [];
   private timelineMaxSlots: number = 5;
 
   private addToTimeline(spellName: string): void {
-    const cost = this.spellCostMap.get(spellName) || '?';
-    const iconFileName = this.spellIconMap.get(spellName) || '';
+    const cost = IOP_SPELL_COST_MAP.get(spellName) || '?';
+    const iconFileName = IOP_SPELL_ICON_MAP.get(spellName) || '';
     
     const entry = {
       spell: spellName,
@@ -362,7 +300,6 @@ class IopBoostsTracker {
     this.preparationLossSpell = null;
     this.timelineEntries = [];
     this.updateTimeline();
-    console.log('[IOP BOOSTS] Resources reset due to combat end');
   }
 
   private updateUI(): void {

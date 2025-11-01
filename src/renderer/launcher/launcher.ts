@@ -16,20 +16,15 @@ class LauncherUI {
   private savedCharacters: { [className: string]: string[] } = {};
 
   constructor() {
-    console.log('DEBUG LAUNCHER: LauncherUI constructor called');
-    console.log('DEBUG LAUNCHER: window exists?', typeof window !== 'undefined');
-    console.log('DEBUG LAUNCHER: window.electronAPI exists?', !!window.electronAPI);
-    console.log('DEBUG LAUNCHER: window.electronAPI keys?', window.electronAPI ? Object.keys(window.electronAPI) : 'N/A');
-    
     if (!window.electronAPI) {
-      console.error('DEBUG LAUNCHER: ❌ window.electronAPI is not available! Preload might not be loaded.');
+      console.error('window.electronAPI is not available! Preload might not be loaded.');
       alert('Erreur: electronAPI n\'est pas disponible. Vérifiez que le preload est chargé.');
       return;
     }
     
     if (!window.electronAPI.onClassDetected) {
-      console.error('DEBUG LAUNCHER: ❌ onClassDetected method not found!');
-      console.error('DEBUG LAUNCHER: Available methods:', Object.keys(window.electronAPI));
+      console.error('onClassDetected method not found!');
+      console.error('Available methods:', Object.keys(window.electronAPI));
       return;
     }
     
@@ -39,8 +34,6 @@ class LauncherUI {
     this.initializeUI();
     this.loadSavedCharacters();
     this.startMonitoring();
-    
-    console.log('DEBUG LAUNCHER: LauncherUI initialized');
   }
 
   private initializeUI(): void {
@@ -104,33 +97,20 @@ class LauncherUI {
   }
 
   private setupEventListeners(): void {
-    console.log('DEBUG LAUNCHER: Setting up event listeners...');
-    console.log('DEBUG LAUNCHER: window.electronAPI:', window.electronAPI);
-    console.log('DEBUG LAUNCHER: window.electronAPI.onClassDetected exists?', typeof window.electronAPI.onClassDetected === 'function');
-    
     // Vérifier qu'ipcRenderer existe dans le preload (devrait être disponible via contextBridge)
     if (typeof window.electronAPI === 'undefined') {
-      console.error('DEBUG LAUNCHER: ❌ window.electronAPI is undefined! Preload might not be loaded.');
+      console.error('window.electronAPI is undefined! Preload might not be loaded.');
       alert('Erreur: window.electronAPI n\'est pas disponible. Vérifiez que le preload est chargé.');
       return;
     }
     
     try {
       // Écouter les détections de classes - ATTACHER LE LISTENER IMMÉDIATEMENT
-      console.log('DEBUG LAUNCHER: Registering onClassDetected listener...');
-      const listener = (detection: { className: string; playerName: string }) => {
-        console.log('DEBUG LAUNCHER: ✅✅✅ class-detected event received in renderer!', detection);
-        console.log('DEBUG LAUNCHER: Detection data:', JSON.stringify(detection));
+      window.electronAPI.onClassDetected((detection: { className: string; playerName: string }) => {
         this.onClassDetected(detection.className as ClassType, detection.playerName);
-      };
-      
-      window.electronAPI.onClassDetected(listener);
-      
-      console.log('DEBUG LAUNCHER: ✅ Event listeners attached successfully');
-      console.log('DEBUG LAUNCHER: Listener registered at:', new Date().toISOString());
+      });
     } catch (error) {
-      console.error('DEBUG LAUNCHER: ❌ Error attaching event listeners:', error);
-      console.error('DEBUG LAUNCHER: Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error('Error attaching event listeners:', error);
     }
 
     // Écouter les événements de combat
@@ -163,18 +143,12 @@ class LauncherUI {
       await window.electronAPI.startMonitoring();
       
       // IMPORTANT: Récupérer les classes déjà détectées (qui peuvent avoir été détectées avant que le listener soit attaché)
-      console.log('DEBUG LAUNCHER: Calling getDetectedClasses()...');
       const alreadyDetected = await window.electronAPI.getDetectedClasses();
-      console.log('DEBUG LAUNCHER: getDetectedClasses() returned:', alreadyDetected);
       
       if (alreadyDetected && alreadyDetected.length > 0) {
-        console.log(`DEBUG LAUNCHER: ✅ Found ${alreadyDetected.length} already detected classes:`, alreadyDetected);
         for (const detection of alreadyDetected) {
-          console.log(`DEBUG LAUNCHER: Processing detection: ${detection.className} / ${detection.playerName}`);
           this.onClassDetected(detection.className as ClassType, detection.playerName);
         }
-      } else {
-        console.log('DEBUG LAUNCHER: No already detected classes found');
       }
       
       // Le statut sera mis à jour par les événements de combat ou de détection
@@ -187,16 +161,12 @@ class LauncherUI {
   }
 
   private onClassDetected(className: ClassType, playerName: string): void {
-    console.log(`DEBUG LAUNCHER: onClassDetected called with ${className} / ${playerName}`);
     const buttonKey = `${className}_${playerName}`;
     
     // Vérifier si le bouton existe déjà
     if (this.classButtons.has(buttonKey)) {
-      console.log(`DEBUG LAUNCHER: Button already exists for ${buttonKey}`);
       return;
     }
-    
-    console.log(`DEBUG LAUNCHER: Creating new button for ${buttonKey}`);
 
     // Vérifier si le personnage est sauvegardé
     const isSaved = this.savedCharacters[className]?.includes(playerName) || false;
@@ -210,25 +180,17 @@ class LauncherUI {
     } else {
       this.updateStatus(`🆕 Nouveau détecté: ${className} (${playerName})`, 'info');
     }
-
-    console.log(`DEBUG: Bouton ${className} ajouté pour ${playerName} (sauvegardé: ${isSaved})`);
   }
 
   private addClassButton(className: ClassType, playerName: string, isSaved: boolean): void {
     const buttonKey = `${className}_${playerName}`;
     const columnId = `${className.toLowerCase()}-buttons`;
-    console.log(`DEBUG LAUNCHER: addClassButton - looking for container: ${columnId}`);
     const buttonsContainer = document.getElementById(columnId);
 
     if (!buttonsContainer) {
-      console.error(`DEBUG LAUNCHER: ❌ Container not found: ${columnId}`);
-      // Lister tous les IDs disponibles pour debug
-      const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-      console.error(`DEBUG LAUNCHER: Available IDs:`, allIds);
+      console.error(`Container not found: ${columnId}`);
       return;
     }
-    
-    console.log(`DEBUG LAUNCHER: ✅ Container found: ${columnId}`);
 
     // Créer le bouton
     const classButton: ClassButton = {
@@ -284,8 +246,6 @@ class LauncherUI {
       if (buttonElement) {
         buttonElement.classList.add('active');
       }
-
-      console.log(`DEBUG: Tracker lancé: ${trackerId}`);
     } catch (error) {
       console.error('Error launching tracker:', error);
       this.updateStatus('❌ Erreur lors du lancement du tracker', 'error');

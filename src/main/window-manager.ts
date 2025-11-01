@@ -63,9 +63,6 @@ export class WindowManager {
     };
 
     const window = new BrowserWindow(defaults);
-    
-    // Log pour debug
-    console.log(`DEBUG WINDOW: Created overlay window ${id} at (${defaults.x}, ${defaults.y}) size ${defaults.width}x${defaults.height}`);
 
     // Sauvegarder la position lors du déplacement
     window.on('moved', () => {

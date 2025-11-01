@@ -29,8 +29,6 @@ export class LogMonitor extends EventEmitter {
 
     if (enableDeduplication) {
       this.deduplicator = new LogDeduplicator(100); // 100ms de fenêtre
-      this.deduplicator.setDebugMode(true);
-      console.log('DEBUG: Déduplication activée pour le log monitor avec debug');
     }
 
     // Initialiser la position à la fin du fichier
@@ -45,13 +43,10 @@ export class LogMonitor extends EventEmitter {
       if (fs.existsSync(this.logFilePath)) {
         const stats = fs.statSync(this.logFilePath);
         this.lastPosition = stats.size;
-        console.log(`DEBUG: Log monitor initialized at position ${this.lastPosition} (end of file)`);
       } else {
-        console.log('DEBUG: Log file doesn\'t exist yet, will start from beginning when created');
         this.lastPosition = 0;
       }
     } catch (error) {
-      console.log(`DEBUG: Error initializing log position: ${error}`);
       this.lastPosition = 0;
     }
   }
@@ -65,7 +60,6 @@ export class LogMonitor extends EventEmitter {
     }
 
     this.monitoring = true;
-    console.log('DEBUG: Starting log monitoring');
 
     // Surveiller le fichier avec un intervalle
     this.checkInterval = setInterval(() => {
@@ -82,7 +76,6 @@ export class LogMonitor extends EventEmitter {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-    console.log('DEBUG: Stopped log monitoring');
   }
 
   /**
@@ -136,34 +129,15 @@ export class LogMonitor extends EventEmitter {
           // Parser la ligne
           const parsed = LogParser.parseLine(trimmed);
 
-          // Debug: Vérifier si la ligne contient "lance le sort"
-          if (trimmed.includes('lance le sort')) {
-            console.log(`DEBUG: Ligne avec "lance le sort" détectée: ${trimmed.substring(0, 100)}...`);
-            console.log(`DEBUG: Parsed result: isSpellCast=${parsed.isSpellCast}, spellCast=`, parsed.spellCast);
-          }
-
-          // Debug: Log les sorts détectés
+          // Détecter la classe si c'est un sort
           if (parsed.isSpellCast && parsed.spellCast) {
-            console.log(`DEBUG: ✅ Sort détecté - Joueur: ${parsed.spellCast.playerName}, Sort: ${parsed.spellCast.spellName}`);
-            
-            // Détecter la classe
             const detectedClass = ClassDetector.detectClass(parsed.spellCast.spellName);
-            console.log(`DEBUG: ClassDetector.detectClass("${parsed.spellCast.spellName}") = ${detectedClass}`);
-            
             if (detectedClass) {
-              console.log(`DEBUG: ✅ Classe détectée: ${detectedClass} pour ${parsed.spellCast.playerName}`);
-              console.log(`DEBUG: Emitting classDetected event...`);
               this.emit('classDetected', {
                 className: detectedClass,
                 playerName: parsed.spellCast.playerName
               });
-              console.log(`DEBUG: classDetected event emitted`);
-            } else {
-              console.log(`DEBUG: ❌ Aucune classe détectée pour le sort: ${parsed.spellCast.spellName}`);
             }
-          } else if (trimmed.includes('lance le sort')) {
-            // Si la ligne contient "lance le sort" mais n'est pas parsée, debug
-            console.log(`DEBUG: ⚠️ Ligne contient "lance le sort" mais parsing échoué`);
           }
 
           // Émettre l'événement pour chaque ligne

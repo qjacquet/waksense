@@ -43,9 +43,6 @@ export class LogDeduplicator {
 
     if (!parsed.timestamp || !parsed.content) {
       // Si on ne peut pas parser, traiter quand même pour éviter de perdre des données
-      if (this.debugMode) {
-        console.log(`DEBUG: Impossible de parser la ligne, traitement forcé: ${line.substring(0, 50)}...`);
-      }
       return true;
     }
 
@@ -58,10 +55,6 @@ export class LogDeduplicator {
         entry.content === parsed.content
       ) {
         this.duplicatesDetected++;
-        if (this.debugMode) {
-          const timeDiff = Math.abs(currentTimeMs - entry.timestampMs);
-          console.log(`DEBUG: 🚫 DOUBLON IGNORÉ (diff: ${timeDiff}ms) - ${parsed.content.substring(0, 60)}...`);
-        }
         return false;
       }
     }
@@ -78,10 +71,6 @@ export class LogDeduplicator {
     // Limiter la taille de l'historique
     if (this.messageHistory.length > this.maxHistory) {
       this.messageHistory.shift();
-    }
-
-    if (this.debugMode) {
-      console.log(`DEBUG: ✅ MESSAGE TRAITÉ - ${parsed.content.substring(0, 60)}...`);
     }
 
     return true;
@@ -101,9 +90,7 @@ export class LogDeduplicator {
         };
       }
     } catch (e) {
-      if (this.debugMode) {
-        console.log(`DEBUG: Erreur parsing ligne: ${e}`);
-      }
+      // Erreur silencieuse
     }
 
     return { timestamp: null, content: null };
@@ -121,16 +108,12 @@ export class LogDeduplicator {
       // Convertir en millisecondes depuis minuit
       return (h * 3600 + m * 60 + s) * 1000 + ms;
     } catch (e) {
-      if (this.debugMode) {
-        console.log(`DEBUG: Erreur conversion timestamp: ${e}`);
-      }
       return 0;
     }
   }
 
   setDebugMode(enabled: boolean): void {
     this.debugMode = enabled;
-    console.log(`DEBUG: Mode debug déduplication ${enabled ? 'activé' : 'désactivé'}`);
   }
 
   getStats(): DeduplicationStats {
@@ -149,7 +132,6 @@ export class LogDeduplicator {
     this.duplicatesDetected = 0;
     this.totalMessages = 0;
     this.messageHistory = [];
-    console.log('DEBUG: Statistiques de déduplication remises à zéro');
   }
 }
 

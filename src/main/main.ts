@@ -53,13 +53,10 @@ function createDetectionOverlay(): void {
     // Envoyer les classes déjà détectées à l'overlay
     const alreadyDetected = Array.from(detectedClasses.values());
     if (alreadyDetected.length > 0 && detectionOverlay && !detectionOverlay.isDestroyed()) {
-      console.log(`[MAIN] Sending ${alreadyDetected.length} already detected classes to overlay`);
       for (const detection of alreadyDetected) {
         detectionOverlay.webContents.send('class-detected', detection);
       }
     }
-    
-    console.log('[MAIN] Detection overlay loaded');
   });
 
   detectionOverlay.on('closed', () => {
@@ -68,7 +65,6 @@ function createDetectionOverlay(): void {
 
   // Afficher l'overlay
   detectionOverlay.show();
-  console.log('[MAIN] Detection overlay created');
 }
 
 // Fonction pour créer la fenêtre principale
@@ -89,9 +85,8 @@ function createLauncherWindow(): void {
   // Charger l'interface HTML
   launcherWindow.loadFile(path.join(__dirname, '..', 'renderer', 'launcher', 'index.html'));
 
-  // Ne pas ouvrir DevTools automatiquement (utiliser F12 si besoin)
   launcherWindow.webContents.once('did-finish-load', () => {
-    console.log('[MAIN] Launcher window loaded');
+    // Window loaded
   });
 
   launcherWindow.on('closed', () => {
@@ -124,10 +119,8 @@ app.whenReady().then(() => {
       const fs = require('fs');
       if (fs.existsSync(logFilePath)) {
         startLogMonitoring(logFilePath);
-        console.log(`DEBUG: Auto-started monitoring with: ${logFilePath}`);
         launcherWindow?.webContents.send('monitoring-started');
       } else {
-        console.log(`DEBUG: Log file not found at: ${logFilePath}, waiting for manual selection`);
         launcherWindow?.webContents.send('log-file-not-found');
       }
     });
@@ -227,34 +220,22 @@ function startLogMonitoring(logFilePath: string): void {
 
   logMonitor = new LogMonitor(logFilePath, true);
 
-  console.log('DEBUG: LogMonitor créé, attachant les listeners...');
-  console.log('DEBUG: Launcher window existe:', !!launcherWindow);
-
   // Écouter les événements de détection de classes
   logMonitor.on('classDetected', (detection: ClassDetection) => {
     const key = `${detection.className}_${detection.playerName}`;
-    
-    // Stocker la détection (même si le listener n'est pas encore attaché)
     detectedClasses.set(key, detection);
-    
-    console.log('DEBUG: 🎯 classDetected event received!', detection);
-    console.log('DEBUG: Stored in cache, total:', detectedClasses.size);
     
     // Envoyer à l'overlay de détection (si elle existe)
     if (detectionOverlay && !detectionOverlay.isDestroyed() && detectionOverlay.webContents) {
       try {
         detectionOverlay.webContents.send('class-detected', detection);
-        console.log('DEBUG: ✅ Sent class-detected to detection overlay');
-        
-        // Afficher l'overlay si elle est cachée
         if (!detectionOverlay.isVisible()) {
           detectionOverlay.show();
         }
       } catch (error) {
-        console.error('DEBUG: ❌ Error sending class-detected to overlay:', error);
+        console.error('Error sending class-detected to overlay:', error);
       }
     } else {
-      // Créer l'overlay si elle n'existe pas encore
       createDetectionOverlay();
     }
     
@@ -263,12 +244,10 @@ function startLogMonitoring(logFilePath: string): void {
       try {
         launcherWindow.webContents.send('class-detected', detection);
       } catch (error) {
-        console.error('DEBUG: ❌ Error sending class-detected to launcher:', error);
+        console.error('Error sending class-detected to launcher:', error);
       }
     }
   });
-  
-  console.log('DEBUG: Listeners attachés');
 
   // Écouter les événements de combat
   logMonitor.on('combatStarted', () => {
@@ -281,21 +260,14 @@ function startLogMonitoring(logFilePath: string): void {
 
   // Écouter les nouvelles lignes de logs (pour les trackers)
   logMonitor.on('logLine', (line: string, parsed: any) => {
-    // Envoyer aux fenêtres de tracker actives
     WindowManager.getAllWindows().forEach((window, id) => {
       if (id.startsWith('tracker-')) {
         window.webContents.send('log-line', line, parsed);
       }
     });
   });
-
-  // Vérifier que les listeners sont bien attachés
-  console.log(`DEBUG: Nombre de listeners 'classDetected': ${logMonitor.listenerCount('classDetected')}`);
-  console.log(`DEBUG: Nombre de listeners 'logLine': ${logMonitor.listenerCount('logLine')}`);
   
   logMonitor.start();
-  console.log(`DEBUG: Started monitoring log file: ${logFilePath}`);
-  console.log(`DEBUG: Monitoring status: ${logMonitor ? 'active' : 'inactive'}`);
 }
 
 // Fonction pour arrêter la surveillance des logs
@@ -306,6 +278,69 @@ function stopLogMonitoring(): void {
   }
 }
 
+// Helper pour créer un tracker IOP
+function createIopTracker(trackerId: string, htmlFile: string, width: number, height: number, rendererName?: string): BrowserWindow {
+  if (WindowManager.hasWindow(trackerId)) {
+    const existingWindow = WindowManager.getWindow(trackerId);
+    existingWindow?.show();
+    existingWindow?.focus();
+    return existingWindow!;
+  }
+
+  const window = WindowManager.createOverlayWindow(trackerId, {
+    width,
+    height,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: true,
+    frame: false
+  });
+
+  const htmlPath = path.join(__dirname, '..', 'renderer', 'trackers', 'iop', htmlFile);
+  
+  // Gérer les erreurs de chargement
+  window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[${rendererName || 'IOP TRACKER'}] Failed to load: ${errorCode} - ${errorDescription} - ${validatedURL}`);
+    console.error(`[${rendererName || 'IOP TRACKER'}] Attempted to load: ${htmlPath}`);
+  });
+
+  window.loadFile(htmlPath)
+    .then(() => {
+      console.log(`[${rendererName || 'IOP TRACKER'}] Successfully loaded HTML: ${htmlPath}`);
+      window.show();
+      window.focus();
+    })
+    .catch((error) => {
+      console.error(`[${rendererName || 'IOP TRACKER'}] Error loading HTML: ${error}`);
+    });
+
+  // Écouter les messages de console du renderer
+  if (rendererName) {
+    window.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log(`[${rendererName} RENDERER ${level}]: ${message} (${sourceId}:${line})`);
+    });
+  }
+
+  window.webContents.once('did-finish-load', () => {
+    console.log(`[${rendererName || 'IOP TRACKER'}] Window content loaded for ${trackerId}`);
+    window.show();
+    window.focus();
+    const bounds = window.getBounds();
+    console.log(`[${rendererName || 'IOP TRACKER'}] Window bounds: ${JSON.stringify(bounds)}`);
+    console.log(`[${rendererName || 'IOP TRACKER'}] Window visible: ${window.isVisible()}`);
+  });
+
+  window.on('closed', () => {
+    WindowManager.closeWindow(trackerId);
+  });
+
+  // Afficher la fenêtre immédiatement
+  window.show();
+  console.log(`[${rendererName || 'IOP TRACKER'}] Created window ${trackerId} and called show()`);
+
+  return window;
+}
+
 // Gestion IPC pour créer des trackers
 ipcMain.handle('create-tracker', (_event, className: string, playerName: string) => {
   // Pour Iop, créer deux fenêtres séparées : boosts et combos
@@ -313,66 +348,13 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
     const boostsTrackerId = `tracker-${className}-${playerName}-boosts`;
     const combosTrackerId = `tracker-${className}-${playerName}-combos`;
 
-    // Créer le tracker Boosts
-    if (!WindowManager.hasWindow(boostsTrackerId)) {
-      const boostsWindow = WindowManager.createOverlayWindow(boostsTrackerId, {
-        width: 280,
-        height: 200,
-        transparent: true,
-        alwaysOnTop: true,
-        resizable: true,
-        frame: false
-      });
-
-      const boostsHtmlPath = path.join(__dirname, '..', 'renderer', 'trackers', 'iop', 'boosts.html');
-      boostsWindow.loadFile(boostsHtmlPath);
-
-      boostsWindow.webContents.once('did-finish-load', () => {
-        boostsWindow.show();
-      });
-
-      boostsWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        console.log(`[IOP BOOSTS RENDERER ${level}]: ${message} (${sourceId}:${line})`);
-      });
-
-      boostsWindow.on('closed', () => {
-        WindowManager.closeWindow(boostsTrackerId);
-      });
-    } else {
-      const existingWindow = WindowManager.getWindow(boostsTrackerId);
-      existingWindow?.show();
-      existingWindow?.focus();
-    }
-
-    // Créer le tracker Combos
-    if (!WindowManager.hasWindow(combosTrackerId)) {
-      const combosWindow = WindowManager.createOverlayWindow(combosTrackerId, {
-        width: 240,
-        height: 180,
-        transparent: true,
-        alwaysOnTop: true,
-        resizable: true,
-        frame: false
-      });
-
-      const combosHtmlPath = path.join(__dirname, '..', 'renderer', 'trackers', 'iop', 'combos.html');
-      combosWindow.loadFile(combosHtmlPath);
-
-      combosWindow.webContents.once('did-finish-load', () => {
-        combosWindow.show();
-      });
-
-      combosWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        console.log(`[IOP COMBOS RENDERER ${level}]: ${message} (${sourceId}:${line})`);
-      });
-
-      combosWindow.on('closed', () => {
-        WindowManager.closeWindow(combosTrackerId);
-      });
-    } else {
-      const existingWindow = WindowManager.getWindow(combosTrackerId);
-      existingWindow?.show();
-      existingWindow?.focus();
+    const boostsWindow = createIopTracker(boostsTrackerId, 'boosts.html', 280, 200, 'IOP BOOSTS');
+    
+    // Positionner la fenêtre combos à côté de la fenêtre boosts
+    const combosWindow = createIopTracker(combosTrackerId, 'combos.html', 240, 180, 'IOP COMBOS');
+    if (boostsWindow && !boostsWindow.isDestroyed()) {
+      const boostsBounds = boostsWindow.getBounds();
+      combosWindow.setPosition(boostsBounds.x + boostsBounds.width + 10, boostsBounds.y);
     }
 
     // Démarrer la surveillance des logs si ce n'est pas déjà fait
@@ -407,32 +389,24 @@ ipcMain.handle('create-tracker', (_event, className: string, playerName: string)
 
   // Charger l'interface du tracker selon la classe
   const trackerHtmlPath = path.join(__dirname, '..', 'renderer', 'trackers', className.toLowerCase(), 'index.html');
-  console.log(`DEBUG: Loading tracker HTML from: ${trackerHtmlPath}`);
   
   trackerWindow.loadFile(trackerHtmlPath)
     .then(() => {
-      console.log(`DEBUG: Tracker HTML loaded successfully for ${trackerId}`);
-      // Afficher la fenêtre après le chargement
       trackerWindow.show();
     })
     .catch((error) => {
-      console.error(`DEBUG: Error loading tracker HTML: ${error}`);
+      console.error(`Error loading tracker HTML: ${error}`);
     });
 
   // Écouter quand le contenu est chargé
   trackerWindow.webContents.once('did-finish-load', () => {
-    console.log(`DEBUG: Tracker window content loaded for ${trackerId}`);
-    console.log(`DEBUG: Window bounds: ${JSON.stringify(trackerWindow.getBounds())}`);
-    console.log(`DEBUG: Window is visible: ${trackerWindow.isVisible()}`);
-    // Afficher la fenêtre après le chargement
     trackerWindow.show();
     trackerWindow.focus();
-    // Ne pas ouvrir DevTools automatiquement (utiliser F12 si besoin)
   });
 
   // Écouter les erreurs de chargement
   trackerWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-    console.error(`DEBUG: Failed to load tracker: ${errorCode} - ${errorDescription} - ${validatedURL}`);
+    console.error(`Failed to load tracker: ${errorCode} - ${errorDescription} - ${validatedURL}`);
   });
 
   // Écouter les erreurs de console du renderer
@@ -468,9 +442,7 @@ ipcMain.handle('get-deduplication-stats', () => {
 
 // Exposer les classes détectées (même celles qui ont été détectées avant que le listener soit attaché)
 ipcMain.handle('get-detected-classes', () => {
-  const classes = Array.from(detectedClasses.values());
-  console.log(`DEBUG: get-detected-classes called, returning ${classes.length} classes:`, classes);
-  return classes;
+  return Array.from(detectedClasses.values());
 });
 
 // Export pour les tests

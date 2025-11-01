@@ -82,9 +82,6 @@ export class LogParser {
         spellName: spellMatch[2].trim(),
         timestamp
       };
-      
-      // Debug pour voir ce qui est parsé
-      console.log(`DEBUG PARSER: Joueur="${spellCast.playerName}", Sort="${spellCast.spellName}"`);
     } else if (playerPart && spellPart) {
       // Utiliser les parties extraites manuellement
       spellCast = {
@@ -92,9 +89,6 @@ export class LogParser {
         spellName: spellPart.trim(),
         timestamp
       };
-      
-      // Debug pour voir ce qui est parsé
-      console.log(`DEBUG PARSER (fallback): Joueur="${spellCast.playerName}", Sort="${spellCast.spellName}"`);
     }
 
     return {

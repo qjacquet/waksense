@@ -27,30 +27,18 @@ class IopTracker {
   private maxTimelineEntries = 5;
 
   constructor() {
-    console.log('DEBUG TRACKER: IopTracker initialized');
     this.setupEventListeners();
     this.updateUI();
-    // Test visuel : mettre des valeurs par défaut pour voir si l'UI fonctionne
-    this.resources.pa = 6;
-    this.resources.pm = 4;
-    this.resources.pw = 2;
-    this.resources.concentration = 50;
-    this.updateUI();
-    console.log('DEBUG TRACKER: UI updated with test values');
   }
 
   private setupEventListeners(): void {
-    // Vérifier que electronAPI est disponible
     if (!window.electronAPI) {
-      console.error('DEBUG TRACKER: window.electronAPI is not available!');
+      console.error('window.electronAPI is not available!');
       return;
     }
-
-    console.log('DEBUG TRACKER: Setting up event listeners...');
     
     // Écouter les nouvelles lignes de logs
     window.electronAPI.onLogLine((line: string, parsed: any) => {
-      console.log('DEBUG TRACKER: Received log line:', line.substring(0, 80));
       this.processLogLine(line, parsed);
     });
   }

@@ -21,44 +21,28 @@ class DetectionOverlay {
   }
 
   private initializeUI(): void {
-    console.log('[OVERLAY] Initializing UI...');
-    
     this.classesContainer = document.getElementById('classes-container');
 
     if (!this.classesContainer) {
-      console.error('[OVERLAY] ❌ Classes container not found!');
-    } else {
-      console.log('[OVERLAY] ✅ Classes container found');
+      console.error('[OVERLAY] Classes container not found!');
     }
-
-    console.log('[OVERLAY] Detection overlay initialized');
   }
 
   private setupEventListeners(): void {
-    console.log('[OVERLAY] Setting up event listeners...');
-    console.log('[OVERLAY] window.electronAPI exists?', !!window.electronAPI);
-    console.log('[OVERLAY] window.electronAPI.onClassDetected exists?', !!(window.electronAPI && window.electronAPI.onClassDetected));
-    
     // Écouter les détections de classes
     if (window.electronAPI && window.electronAPI.onClassDetected) {
-      console.log('[OVERLAY] Registering onClassDetected listener...');
       window.electronAPI.onClassDetected((detection) => {
-        console.log('[OVERLAY] ✅✅✅ Class detected event received:', detection);
         this.addDetectedClass(detection.className as ClassType, detection.playerName);
       });
-      console.log('[OVERLAY] ✅ onClassDetected listener registered');
     } else {
-      console.error('[OVERLAY] ❌ window.electronAPI or onClassDetected not available!');
+      console.error('[OVERLAY] window.electronAPI or onClassDetected not available!');
     }
-
-    console.log('[OVERLAY] Event listeners attached');
   }
 
   private async loadAlreadyDetectedClasses(): Promise<void> {
     try {
       if (window.electronAPI && window.electronAPI.getDetectedClasses) {
         const alreadyDetected = await window.electronAPI.getDetectedClasses();
-        console.log('[OVERLAY] Loaded already detected classes:', alreadyDetected);
         
         if (alreadyDetected && alreadyDetected.length > 0) {
           for (const detection of alreadyDetected) {
@@ -76,11 +60,8 @@ class DetectionOverlay {
     
     // Vérifier si la classe existe déjà
     if (this.detectedClasses.has(buttonKey)) {
-      console.log(`[OVERLAY] Class ${buttonKey} already exists`);
       return;
     }
-
-    console.log(`[OVERLAY] Adding class: ${className} / ${playerName}`);
 
     // Stocker la classe
     this.detectedClasses.set(buttonKey, {
@@ -130,13 +111,10 @@ class DetectionOverlay {
 
     container.appendChild(button);
     this.classesContainer.appendChild(container);
-
-    console.log(`[OVERLAY] Button created for ${buttonKey}`);
   }
 
   private async launchTracker(className: ClassType, playerName: string): Promise<void> {
     try {
-      console.log(`[OVERLAY] Launching tracker: ${className} / ${playerName}`);
       if (window.electronAPI && window.electronAPI.createTracker) {
         await window.electronAPI.createTracker(className, playerName);
       }

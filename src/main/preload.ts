@@ -4,9 +4,6 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Log pour confirmer que le preload est chargé
-console.log('[PRELOAD] Preload script loaded');
-
 // Expose les API IPC au renderer de manière sécurisée
 contextBridge.exposeInMainWorld('electronAPI', {
   // Configuration et personnages
@@ -35,9 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Événements du main process
   onClassDetected: (callback: (detection: { className: string; playerName: string }) => void) => {
-    console.log('[PRELOAD] onClassDetected listener registered');
     ipcRenderer.on('class-detected', (_event, detection) => {
-      console.log('[PRELOAD] class-detected event received in preload:', detection);
       callback(detection);
     });
   },
