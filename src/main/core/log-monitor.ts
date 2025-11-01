@@ -5,9 +5,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
-import { LogDeduplicator } from '../shared/log-deduplicator';
-import { LogParser } from '../shared/log-parser';
-import { ClassDetector } from '../shared/class-detector';
+import { LogDeduplicator, LogParser } from '../../shared/log/log-processor';
+import { ClassDetector } from '../../shared/domain/wakfu-domain';
 
 export interface ClassDetection {
   className: string;
@@ -28,10 +27,9 @@ export class LogMonitor extends EventEmitter {
     this.enableDeduplication = enableDeduplication;
 
     if (enableDeduplication) {
-      this.deduplicator = new LogDeduplicator(100); // 100ms de fenêtre
+      this.deduplicator = new LogDeduplicator(100);
     }
 
-    // Initialiser la position à la fin du fichier
     this.initializePositionToEnd();
   }
 
@@ -61,10 +59,9 @@ export class LogMonitor extends EventEmitter {
 
     this.monitoring = true;
 
-    // Surveiller le fichier avec un intervalle
     this.checkInterval = setInterval(() => {
       this.checkForChanges();
-    }, 100); // Check every 100ms
+    }, 100);
   }
 
   /**
@@ -94,42 +91,34 @@ export class LogMonitor extends EventEmitter {
       const stats = fs.statSync(this.logFilePath);
       const currentSize = stats.size;
 
-      // Si le fichier a été tronqué ou réinitialisé
       if (currentSize < this.lastPosition) {
         this.lastPosition = 0;
       }
 
-      // Si de nouvelles lignes sont disponibles
       if (currentSize > this.lastPosition) {
         const fd = fs.openSync(this.logFilePath, 'r');
         const buffer = Buffer.alloc(currentSize - this.lastPosition);
         fs.readSync(fd, buffer, 0, buffer.length, this.lastPosition);
         fs.closeSync(fd);
 
-        // Les logs Wakfu sont en UTF-8, lire directement en UTF-8
         const newContent = buffer.toString('utf-8', 0, buffer.length);
-        
         
         const newLines = newContent.split('\n');
 
-        // Traiter chaque ligne
         for (const line of newLines) {
           const trimmed = line.trim();
           if (!trimmed) {
             continue;
           }
 
-          // Vérifier la déduplication si activée
           if (this.enableDeduplication && this.deduplicator) {
             if (!this.deduplicator.shouldProcessLine(trimmed)) {
-              continue; // Ignorer les doublons
+              continue;
             }
           }
 
-          // Parser la ligne
           const parsed = LogParser.parseLine(trimmed);
 
-          // Détecter la classe si c'est un sort
           if (parsed.isSpellCast && parsed.spellCast) {
             const detectedClass = ClassDetector.detectClass(parsed.spellCast.spellName);
             if (detectedClass) {
@@ -140,15 +129,12 @@ export class LogMonitor extends EventEmitter {
             }
           }
 
-          // Émettre l'événement pour chaque ligne
           this.emit('logLine', trimmed, parsed);
 
-          // Détecter le début de combat
           if (LogParser.isCombatStart(trimmed)) {
             this.emit('combatStarted');
           }
 
-          // Détecter la fin de combat
           if (LogParser.isCombatEnd(trimmed)) {
             this.emit('combatEnded');
           }

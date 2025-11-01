@@ -2,7 +2,7 @@
  * Detection Overlay - Overlay transparent pour afficher les classes détectées
  */
 
-// ClassType est défini dans src/renderer/types.d.ts
+import { ClassType } from '../types';
 
 interface DetectedClass {
   className: ClassType;
@@ -29,7 +29,6 @@ class DetectionOverlay {
   }
 
   private setupEventListeners(): void {
-    // Écouter les détections de classes
     if (window.electronAPI && window.electronAPI.onClassDetected) {
       window.electronAPI.onClassDetected((detection) => {
         this.addDetectedClass(detection.className as ClassType, detection.playerName);
@@ -58,22 +57,18 @@ class DetectionOverlay {
   private addDetectedClass(className: ClassType, playerName: string): void {
     const buttonKey = `${className}_${playerName}`;
     
-    // Vérifier si la classe existe déjà
     if (this.detectedClasses.has(buttonKey)) {
       return;
     }
 
-    // Stocker la classe
     this.detectedClasses.set(buttonKey, {
       className,
       playerName,
       buttonKey
     });
 
-    // Créer le bouton
     this.createClassButton(className, playerName, buttonKey);
 
-    // Afficher l'overlay si elle est cachée
     document.body.style.display = 'block';
   }
 
@@ -83,23 +78,19 @@ class DetectionOverlay {
       return;
     }
 
-    // Créer le conteneur du bouton
     const container = document.createElement('div');
     container.className = 'class-item';
     container.dataset.buttonKey = buttonKey;
 
-    // Créer l'icône (emoji pour l'instant)
     const icon = document.createElement('span');
     icon.className = 'class-icon';
     icon.textContent = className === 'Iop' ? '⚔' : className === 'Cra' ? '🏹' : '🐕';
 
-    // Créer le nom
     const name = document.createElement('span');
     name.className = 'class-name';
     name.textContent = playerName;
     name.classList.add(`class-${className.toLowerCase()}`);
 
-    // Créer le bouton cliquable
     const button = document.createElement('button');
     button.className = 'class-button';
     button.appendChild(icon);
@@ -124,7 +115,6 @@ class DetectionOverlay {
   }
 }
 
-// Initialiser l'overlay quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', () => {
   new DetectionOverlay();
 });

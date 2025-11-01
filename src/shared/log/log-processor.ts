@@ -1,12 +1,26 @@
 /**
- * Log Deduplicator - Gestionnaire de déduplication des logs basé sur le timing
- * Gère les doublons causés par plusieurs instances Wakfu qui écrivent dans le même fichier de log
+ * Log Processor - Traitement complet des logs Wakfu
+ * Parse et déduplique les lignes de logs
  */
 
 interface LogEntry {
   timestampMs: number;
   content: string;
   fullLine: string;
+}
+
+export interface SpellCast {
+  playerName: string;
+  spellName: string;
+  timestamp: string;
+}
+
+export interface LogLineInfo {
+  type: 'combat' | 'information' | 'other';
+  isSpellCast: boolean;
+  spellCast?: SpellCast;
+  content: string;
+  timestamp: string;
 }
 
 export interface DeduplicationStats {
@@ -17,6 +31,98 @@ export interface DeduplicationStats {
   duplicateRate: number;
 }
 
+/**
+ * Parser pour les logs Wakfu
+ */
+export class LogParser {
+  /**
+   * Parse une ligne de log et extrait les informations pertinentes
+   */
+  static parseLine(line: string): LogLineInfo {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return {
+        type: 'other',
+        isSpellCast: false,
+        content: '',
+        timestamp: ''
+      };
+    }
+
+    const timestampMatch = trimmed.match(/^(\d{2}:\d{2}:\d{2},\d{3})/);
+    const timestamp = timestampMatch ? timestampMatch[1] : '';
+
+    const contentMatch = trimmed.match(/^\d{2}:\d{2}:\d{2},\d{3}\s*-\s*(.+)$/);
+    const content = contentMatch ? contentMatch[1] : trimmed;
+
+    let type: 'combat' | 'information' | 'other' = 'other';
+    if (content.includes('[Information (combat)]')) {
+      type = 'combat';
+    } else if (content.includes('[Information]')) {
+      type = 'information';
+    }
+
+    let spellMatch = content.match(/\[Information \(combat\)\]\s*([^:]+?)[:\s]+\s*lance le sort\s+(.+?)(?:\s*\(|$)/);
+    
+    if (!spellMatch) {
+      spellMatch = content.match(/\[Information \(combat\)\]\s*([^:]+?)[:\s]+lance le sort\s+(.+)/);
+    }
+    
+    let playerPart: string | undefined;
+    let spellPart: string | undefined;
+    
+    if (!spellMatch && content.includes('lance le sort')) {
+      const parts = content.split('lance le sort');
+      if (parts.length >= 2) {
+        playerPart = parts[0].replace(/\[Information \(combat\)\]\s*/, '').trim();
+        spellPart = parts[1].split('(')[0].trim();
+      }
+    }
+    
+    let spellCast: SpellCast | undefined;
+
+    if (spellMatch && spellMatch[1] && spellMatch[2]) {
+      spellCast = {
+        playerName: spellMatch[1].trim().replace(/^:/, '').trim(),
+        spellName: spellMatch[2].trim(),
+        timestamp
+      };
+    } else if (playerPart && spellPart) {
+      spellCast = {
+        playerName: playerPart.replace(/^:/, '').trim(),
+        spellName: spellPart.trim(),
+        timestamp
+      };
+    }
+
+    return {
+      type,
+      isSpellCast: !!spellCast,
+      spellCast,
+      content,
+      timestamp
+    };
+  }
+
+  /**
+   * Vérifie si la ligne indique le début d'un combat
+   */
+  static isCombatStart(line: string): boolean {
+    return line.includes('[Information (combat)]') && 
+           line.includes('lance le sort');
+  }
+
+  /**
+   * Vérifie si la ligne indique la fin d'un combat
+   */
+  static isCombatEnd(line: string): boolean {
+    return line.includes("Combat terminé, cliquez ici pour rouvrir l'écran de fin de combat.");
+  }
+}
+
+/**
+ * Déduplicateur de logs - Gère les doublons causés par plusieurs instances Wakfu
+ */
 export class LogDeduplicator {
   private duplicateWindowMs: number;
   private maxHistory: number;
@@ -32,23 +138,18 @@ export class LogDeduplicator {
 
   /**
    * Détermine si une ligne doit être traitée ou si c'est un doublon
-   * @param line Ligne de log complète avec timestamp
-   * @returns true si la ligne doit être traitée, false si c'est un doublon
    */
   shouldProcessLine(line: string): boolean {
     this.totalMessages++;
 
-    // Extraire le timestamp et le contenu du message
     const parsed = this.parseLogLine(line);
 
     if (!parsed.timestamp || !parsed.content) {
-      // Si on ne peut pas parser, traiter quand même pour éviter de perdre des données
       return true;
     }
 
     const currentTimeMs = this.timestampToMs(parsed.timestamp);
 
-    // Vérifier les doublons dans la fenêtre temporelle
     for (const entry of this.messageHistory) {
       if (
         Math.abs(currentTimeMs - entry.timestampMs) <= this.duplicateWindowMs &&
@@ -59,7 +160,6 @@ export class LogDeduplicator {
       }
     }
 
-    // Ajouter à l'historique
     const newEntry: LogEntry = {
       timestampMs: currentTimeMs,
       content: parsed.content,
@@ -68,7 +168,6 @@ export class LogDeduplicator {
 
     this.messageHistory.push(newEntry);
 
-    // Limiter la taille de l'historique
     if (this.messageHistory.length > this.maxHistory) {
       this.messageHistory.shift();
     }
@@ -78,7 +177,6 @@ export class LogDeduplicator {
 
   /**
    * Parse une ligne de log pour extraire timestamp et contenu
-   * Format attendu: "20:34:53,813 - [Information (combat)] Belluzu lance le sort Jugement"
    */
   private parseLogLine(line: string): { timestamp: string | null; content: string | null } {
     try {
@@ -105,7 +203,6 @@ export class LogDeduplicator {
       const [h, m, s] = timePart.split(':').map(Number);
       const ms = parseInt(msPart, 10);
 
-      // Convertir en millisecondes depuis minuit
       return (h * 3600 + m * 60 + s) * 1000 + ms;
     } catch (e) {
       return 0;

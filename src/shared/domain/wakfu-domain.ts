@@ -1,9 +1,13 @@
 /**
- * Détecteur de classes basé sur les sorts lancés
+ * Wakfu Domain - Domaine métier Wakfu
+ * Détection de classes et données des sorts
  */
 
 export type ClassType = 'Iop' | 'Cra' | 'Ouginak';
 
+/**
+ * Détecteur de classes basé sur les sorts lancés
+ */
 export class ClassDetector {
   private static readonly IOP_SPELLS = [
     'Épée céleste',
@@ -85,14 +89,10 @@ export class ClassDetector {
 
   /**
    * Détecte la classe d'un personnage basée sur le nom du sort
-   * @param spellName Nom du sort lancé
-   * @returns Le type de classe ou null si non détecté
    */
   static detectClass(spellName: string): ClassType | null {
-    // Normaliser le nom du sort (supprimer les accents pour comparaison plus robuste)
     const normalizedSpell = this.normalizeString(spellName);
     
-    // Vérifier les sorts Iop
     for (const spell of this.IOP_SPELLS) {
       const normalized = this.normalizeString(spell);
       if (normalizedSpell.includes(normalized)) {
@@ -100,7 +100,6 @@ export class ClassDetector {
       }
     }
     
-    // Vérifier les sorts Cra
     for (const spell of this.CRA_SPELLS) {
       const normalized = this.normalizeString(spell);
       if (normalizedSpell.includes(normalized)) {
@@ -108,7 +107,6 @@ export class ClassDetector {
       }
     }
     
-    // Vérifier les sorts Ouginak
     for (const spell of this.OUGINAK_SPELLS) {
       const normalized = this.normalizeString(spell);
       if (normalizedSpell.includes(normalized)) {
@@ -145,4 +143,59 @@ export class ClassDetector {
     }
   }
 }
+
+/**
+ * Données partagées pour les sorts Iop
+ */
+export const IOP_SPELL_COST_MAP = new Map<string, string>([
+  ["Épée céleste", "2PA"],
+  ["Fulgur", "3PA"],
+  ["Super Iop Punch", "4PA"],
+  ["Jugement", "1PA"],
+  ["Colère de Iop", "6PA"],
+  ["Ébranler", "2PA"],
+  ["Roknocerok", "4PA"],
+  ["Fendoir", "3PA"],
+  ["Ravage", "5PA"],
+  ["Jabs", "3PA"],
+  ["Rafale", "1PA"],
+  ["Torgnole", "2PA"],
+  ["Tannée", "4PA"],
+  ["Épée de Iop", "3PA"],
+  ["Bond", "4PA"],
+  ["Focus", "2PA"],
+  ["Éventrail", "1PM"],
+  ["Uppercut", "1PW"],
+  ["Amplification", "2PM"],
+  ["Duel", "1PA"],
+  ["Étendard de bravoure", "3PA"],
+  ["Vertu", "2PA"],
+  ["Charge", "1PA"]
+]);
+
+export const IOP_SPELL_ICON_MAP = new Map<string, string>([
+  ["Épée céleste", "epeeceleste.png"],
+  ["Fulgur", "fulgur.png"],
+  ["Super Iop Punch", "superioppunch.png"],
+  ["Jugement", "jugement.png"],
+  ["Colère de Iop", "colere.png"],
+  ["Ébranler", "ebranler.png"],
+  ["Roknocerok", "roknocerok.png"],
+  ["Fendoir", "fendoir.png"],
+  ["Ravage", "ravage.png"],
+  ["Jabs", "jabs.png"],
+  ["Rafale", "rafale.png"],
+  ["Torgnole", "torgnole.png"],
+  ["Tannée", "tannee.png"],
+  ["Épée de Iop", "Epeeduiop.png"],
+  ["Bond", "Bond.png"],
+  ["Focus", "Focus.png"],
+  ["Éventrail", "eventrail.png"],
+  ["Uppercut", "uppercut.png"],
+  ["Amplification", "Amplification.png"],
+  ["Duel", "Duel.png"],
+  ["Étendard de bravoure", "Etandard.png"],
+  ["Vertu", "Vertu.png"],
+  ["Charge", "charge.png"]
+]);
 

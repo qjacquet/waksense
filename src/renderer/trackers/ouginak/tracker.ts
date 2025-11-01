@@ -2,7 +2,7 @@
  * Ouginak Tracker - Suivi des ressources Ouginak en temps réel
  */
 
-import { setupTrackerEventListeners, updateProgressBar } from '../../shared/ui-helpers';
+import { setupTrackerEventListeners, updateProgressBar } from '../../core/ui-helpers';
 
 class OuginakTracker {
   private rage: number = 0;

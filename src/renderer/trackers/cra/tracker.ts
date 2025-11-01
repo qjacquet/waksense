@@ -2,7 +2,7 @@
  * Cra Tracker - Suivi des ressources Cra en temps réel
  */
 
-import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../shared/ui-helpers';
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers';
 
 class CraTracker {
   private affutage: number = 0;

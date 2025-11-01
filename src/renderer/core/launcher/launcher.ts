@@ -2,7 +2,7 @@
  * Launcher UI - Interface principale du launcher
  */
 
-// ClassType est défini dans src/renderer/types.d.ts
+import { ClassType } from '../types';
 
 interface ClassButton {
   className: ClassType;
@@ -172,7 +172,6 @@ class LauncherUI {
       return;
     }
 
-    // Créer le bouton
     const classButton: ClassButton = {
       className,
       playerName,
@@ -248,7 +247,6 @@ class LauncherUI {
     try {
       await window.electronAPI.deleteCharacter(className, playerName);
 
-      // Retirer de la liste locale
       if (this.savedCharacters[className]) {
         this.savedCharacters[className] = this.savedCharacters[className].filter(name => name !== playerName);
         if (this.savedCharacters[className].length === 0) {
@@ -256,7 +254,6 @@ class LauncherUI {
         }
       }
 
-      // Retirer le bouton de l'UI
       const buttonElement = document.getElementById(`button-${buttonKey}`);
       if (buttonElement) {
         buttonElement.remove();

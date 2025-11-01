@@ -46,11 +46,7 @@
     },
     "files": [
       "dist/**/*",
-      "assets/**/*",
-      "img/**/*",
-      "Iop/img/**/*",
-      "Cra/img/**/*",
-      "Ouginak/img/**/*"
+      "assets/**/*"
     ],
     "win": {
       "target": [
