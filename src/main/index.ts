@@ -9,17 +9,39 @@ import { WindowManager } from './windows/window-manager';
 import { Config } from './core/config';
 import { LogMonitor, ClassDetection } from './core/log-monitor';
 import { setupIpcHandlers } from './handlers/ipc.handlers';
+import { CombatStartInfo } from '../shared/log/log-processor';
+import { ClassType } from '../shared/domain/wakfu-domain';
 
 let launcherWindow: BrowserWindow | null = null;
 let detectionOverlay: BrowserWindow | null = null;
 let logMonitor: LogMonitor | null = null;
+let combatLogMonitor: LogMonitor | null = null; // LogMonitor pour wakfu.log (événements de combat)
 
 const detectedClasses: Map<string, ClassDetection> = new Map();
 
+/**
+ * Ferme tous les trackers de combat
+ */
+function closeAllTrackers(): void {
+  const allWindows = WindowManager.getAllWindows();
+  for (const [id, window] of allWindows) {
+    if (id.startsWith('tracker-')) {
+      WindowManager.closeWindow(id);
+    }
+  }
+}
+
 function ensureLogMonitoring(): void {
+  const logPath = Config.getLogPath() || Config.getDefaultLogPath();
+  
+  // Surveiller wakfu_chat.log pour les sorts (détection de classes)
   if (!logMonitor) {
-    const logPath = Config.getLogPath() || Config.getDefaultLogPath();
     startLogMonitoring(Config.getLogFilePath(logPath));
+  }
+  
+  // Surveiller wakfu.log pour les événements de combat
+  if (!combatLogMonitor) {
+    startCombatLogMonitoring(Config.getCombatLogFilePath(logPath));
   }
 }
 
@@ -142,6 +164,96 @@ app.on('before-quit', () => {
   WindowManager.closeAll();
 });
 
+function startCombatLogMonitoring(logFilePath: string): void {
+  if (combatLogMonitor) {
+    combatLogMonitor.stop();
+  }
+
+  combatLogMonitor = new LogMonitor(logFilePath, true);
+  
+  // Écouter uniquement les événements de combat (début/fin de combat)
+  combatLogMonitor.on('combatStarted', (combatInfo?: CombatStartInfo) => {
+    if (combatInfo && combatInfo.fighters) {
+      // S'assurer que l'overlay existe et est visible avant de détecter les combattants
+      if (!detectionOverlay || detectionOverlay.isDestroyed()) {
+        createDetectionOverlay();
+      } else if (!detectionOverlay.isVisible()) {
+        detectionOverlay.show();
+      }
+      
+      // Nouveau pattern : détecter les combattants et mettre à jour la liste des personnages
+      for (const fighter of combatInfo.fighters) {
+        if (fighter.className) {
+          // Enregistrer la détection de classe
+          const key = `${fighter.className}_${fighter.playerName}`;
+          detectedClasses.set(key, {
+            className: fighter.className,
+            playerName: fighter.playerName
+          });
+          
+          // Notifier la détection de classe pour l'overlay et le launcher
+          // Cela va mettre à jour la liste des personnages
+          WindowManager.safeSendToWindow(detectionOverlay, 'class-detected', {
+            className: fighter.className,
+            playerName: fighter.playerName
+          });
+          
+          WindowManager.safeSendToWindow(launcherWindow, 'class-detected', {
+            className: fighter.className,
+            playerName: fighter.playerName
+          });
+        }
+      }
+    }
+    
+    WindowManager.safeSendToWindow(launcherWindow, 'combat-started');
+  });
+
+  combatLogMonitor.on('fighterJoined', (data: { fightId: number; fighter: { playerName: string; breed: number; className: string | null } }) => {
+    // Un nouveau combattant a rejoint le combat - mettre à jour la liste des personnages
+    if (data.fighter.className) {
+      // S'assurer que l'overlay existe et est visible
+      if (!detectionOverlay || detectionOverlay.isDestroyed()) {
+        createDetectionOverlay();
+      } else if (!detectionOverlay.isVisible()) {
+        detectionOverlay.show();
+      }
+      
+      // Enregistrer la détection de classe
+      const key = `${data.fighter.className}_${data.fighter.playerName}`;
+      detectedClasses.set(key, {
+        className: data.fighter.className,
+        playerName: data.fighter.playerName
+      });
+      
+      // Notifier la détection de classe pour mettre à jour la liste
+      WindowManager.safeSendToWindow(detectionOverlay, 'class-detected', {
+        className: data.fighter.className,
+        playerName: data.fighter.playerName
+      });
+      
+      WindowManager.safeSendToWindow(launcherWindow, 'class-detected', {
+        className: data.fighter.className,
+        playerName: data.fighter.playerName
+      });
+    }
+  });
+
+  combatLogMonitor.on('combatEnded', (fightId?: number) => {
+    // Fermer automatiquement tous les trackers à la fin du combat
+    closeAllTrackers();
+    
+    // Masquer l'overlay de la liste des personnages à la fin du combat
+    if (detectionOverlay && !detectionOverlay.isDestroyed() && detectionOverlay.isVisible()) {
+      detectionOverlay.hide();
+    }
+    
+    WindowManager.safeSendToWindow(launcherWindow, 'combat-ended');
+  });
+  
+  combatLogMonitor.start();
+}
+
 function startLogMonitoring(logFilePath: string): void {
   if (logMonitor) {
     logMonitor.stop();
@@ -162,13 +274,8 @@ function startLogMonitoring(logFilePath: string): void {
     WindowManager.safeSendToWindow(launcherWindow, 'class-detected', detection);
   });
 
-  logMonitor.on('combatStarted', () => {
-    WindowManager.safeSendToWindow(launcherWindow, 'combat-started');
-  });
-
-  logMonitor.on('combatEnded', () => {
-    WindowManager.safeSendToWindow(launcherWindow, 'combat-ended');
-  });
+  // Note: Les événements de combat (combatStarted, combatEnded) sont maintenant gérés par combatLogMonitor
+  // qui surveille wakfu.log. Ce logMonitor surveille wakfu_chat.log pour les sorts.
 
   logMonitor.on('logLine', (line: string, parsed: any) => {
     const trackerWindows = WindowManager.getAllWindows();
@@ -193,7 +300,11 @@ function stopLogMonitoring(): void {
     logMonitor.stop();
     logMonitor = null;
   }
+  if (combatLogMonitor) {
+    combatLogMonitor.stop();
+    combatLogMonitor = null;
+  }
 }
 
-export { createLauncherWindow, startLogMonitoring, stopLogMonitoring };
+export { createLauncherWindow, startLogMonitoring, startCombatLogMonitoring, stopLogMonitoring };
 

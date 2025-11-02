@@ -44,13 +44,33 @@ export class Config {
   }
 
   /**
-   * Obtient le chemin du fichier de logs
+   * Obtient le chemin du fichier de logs (wakfu_chat.log)
    */
   static getLogFilePath(logsDir?: string): string {
     if (!logsDir) {
       return this.getDefaultLogPath();
     }
     return path.join(logsDir, 'wakfu_chat.log');
+  }
+
+  /**
+   * Obtient le chemin du fichier de logs principal (wakfu.log) qui contient les événements de combat
+   */
+  static getCombatLogFilePath(logsDir?: string): string {
+    if (!logsDir) {
+      const userProfile = os.homedir();
+      return path.join(
+        userProfile,
+        'AppData',
+        'Roaming',
+        'zaap',
+        'gamesLogs',
+        'wakfu',
+        'logs',
+        'wakfu.log'
+      );
+    }
+    return path.join(logsDir, 'wakfu.log');
   }
 
   /**

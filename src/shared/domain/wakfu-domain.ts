@@ -6,6 +6,25 @@
 export type ClassType = 'Iop' | 'Cra' | 'Ouginak';
 
 /**
+ * Mapping des numéros de breed vers les classes
+ * Les breeds sont les identifiants numériques des classes dans Wakfu
+ */
+export const BREED_TO_CLASS_MAP: Map<number, ClassType> = new Map([
+  [8, 'Iop'],
+  // Note: Les autres numéros de breed peuvent être ajoutés au fur et à mesure
+  // breed 9 = Cra (approximatif)
+  // breed 11 = Ouginak (approximatif)
+  // Ces valeurs sont à confirmer avec les logs réels
+]);
+
+/**
+ * Convertit un numéro de breed en classe
+ */
+export function breedToClass(breed: number): ClassType | null {
+  return BREED_TO_CLASS_MAP.get(breed) || null;
+}
+
+/**
  * Détecteur de classes basé sur les sorts lancés
  */
 export class ClassDetector {

@@ -82,13 +82,19 @@ export function setupIpcHandlers(
 
   ipcMain.handle('start-monitoring', (_event, logsDir?: string) => {
     const dirToUse = logsDir || Config.getLogPath();
-    const logFilePath = Config.getLogFilePath(dirToUse);
+    const chatLogPath = Config.getLogFilePath(dirToUse);
+    const combatLogPath = Config.getCombatLogFilePath(dirToUse);
     
     if (logsDir) {
       Config.setLogPath(logsDir);
     }
     
-    startLogMonitoring(logFilePath);
+    startLogMonitoring(chatLogPath);
+    // Note: startCombatLogMonitoring est appelé dans ensureLogMonitoring si nécessaire
+    // Mais ici on le force aussi pour être sûr
+    const { startCombatLogMonitoring } = require('../index');
+    startCombatLogMonitoring(combatLogPath);
+    
     return dirToUse || Config.getDefaultLogPath();
   });
 

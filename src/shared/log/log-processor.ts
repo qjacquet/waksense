@@ -3,6 +3,8 @@
  * Parse et déduplique les lignes de logs
  */
 
+import { breedToClass } from '../domain/wakfu-domain';
+
 interface LogEntry {
   timestampMs: number;
   content: string;
@@ -13,6 +15,17 @@ export interface SpellCast {
   playerName: string;
   spellName: string;
   timestamp: string;
+}
+
+export interface Fighter {
+  playerName: string;
+  breed: number;
+  className: string | null; // null si la classe n'est pas connue
+}
+
+export interface CombatStartInfo {
+  fightId: number;
+  fighters: Fighter[];
 }
 
 export interface LogLineInfo {
@@ -105,18 +118,86 @@ export class LogParser {
   }
 
   /**
-   * Vérifie si la ligne indique le début d'un combat
+   * Vérifie si la ligne indique le début d'un combat avec le nouveau pattern
+   * Pattern: INFO ... - [_FL_] fightId=... <nom> breed : <numéro> ... isControlledByAI=...
    */
   static isCombatStart(line: string): boolean {
+    // Nouveau pattern: [_FL_] fightId=... breed : ...
+    if (line.includes('[_FL_]') && line.includes('fightId=') && line.includes('breed :')) {
+      return true;
+    }
+    // Ancien pattern (conservé pour compatibilité)
     return line.includes('[Information (combat)]') && 
            line.includes('lance le sort');
   }
 
   /**
+   * Parse les informations de début de combat depuis une ligne de log
+   * Pattern: INFO ... - [_FL_] fightId=1552072008 Astra Gladia breed : 8 [7595487] isControlledByAI=false ...
+   * 
+   * Retourne null si :
+   * - La ligne ne matche pas le pattern
+   * - isControlledByAI=true (c'est un monstre, pas un joueur)
+   */
+  static parseCombatStart(line: string): CombatStartInfo | null {
+    // Pattern: [_FL_] fightId=<id> <nom> breed : <numéro> ... isControlledByAI=<bool>
+    // Exemple: INFO ... - [_FL_] fightId=1552072008 Astra Gladia breed : 8 [7595487] isControlledByAI=false ...
+    // Le nom peut contenir des espaces, donc on prend tout jusqu'à "breed :"
+    const pattern = /\[_FL_\]\s+fightId=(\d+)\s+(.+?)\s+breed\s*:\s*(\d+)\s+.*?isControlledByAI=(true|false)/;
+    const match = line.match(pattern);
+    
+    if (match) {
+      const fightId = parseInt(match[1], 10);
+      const playerName = match[2].trim();
+      const breed = parseInt(match[3], 10);
+      const isControlledByAI = match[4] === 'true';
+      
+      // Ne garder que les joueurs (isControlledByAI=false), pas les monstres
+      if (isControlledByAI) {
+        return null;
+      }
+      
+      const className = breedToClass(breed);
+      
+      return {
+        fightId,
+        fighters: [{
+          playerName,
+          breed,
+          className
+        }]
+      };
+    }
+    
+    return null;
+  }
+
+  /**
    * Vérifie si la ligne indique la fin d'un combat
+   * Pattern: INFO ... - [FIGHT] End fight with id ...
    */
   static isCombatEnd(line: string): boolean {
+    // Nouveau pattern: [FIGHT] End fight with id
+    if (line.includes('[FIGHT]') && line.includes('End fight with id')) {
+      return true;
+    }
+    // Ancien pattern (conservé pour compatibilité)
     return line.includes("Combat terminé, cliquez ici pour rouvrir l'écran de fin de combat.");
+  }
+
+  /**
+   * Parse le fightId depuis une ligne de fin de combat
+   * Pattern: INFO ... - [FIGHT] End fight with id 1552084023
+   */
+  static parseCombatEnd(line: string): number | null {
+    const pattern = /\[FIGHT\]\s+End fight with id\s+(\d+)/;
+    const match = line.match(pattern);
+    
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    return null;
   }
 }
 

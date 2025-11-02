@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { EventEmitter } from 'events';
-import { LogDeduplicator, LogParser } from '../../shared/log/log-processor';
+import { LogDeduplicator, LogParser, CombatStartInfo } from '../../shared/log/log-processor';
 import { ClassDetector } from '../../shared/domain/wakfu-domain';
 
 export interface ClassDetection {
@@ -20,6 +20,8 @@ export class LogMonitor extends EventEmitter {
   private deduplicator?: LogDeduplicator;
   private enableDeduplication: boolean;
   private checkInterval: NodeJS.Timeout | null = null;
+  private currentFightId: number | null = null;
+  private currentFightFighters: Map<string, CombatStartInfo['fighters'][0]> = new Map(); // key = playerName
 
   constructor(logFilePath: string, enableDeduplication: boolean = true) {
     super();
@@ -131,12 +133,55 @@ export class LogMonitor extends EventEmitter {
 
           this.emit('logLine', trimmed, parsed);
 
+          // Détection du début de combat avec le nouveau pattern
           if (LogParser.isCombatStart(trimmed)) {
-            this.emit('combatStarted');
+            const combatInfo = LogParser.parseCombatStart(trimmed);
+            if (combatInfo) {
+              // Nouveau combat détecté (nouveau fightId)
+              if (this.currentFightId !== combatInfo.fightId) {
+                this.currentFightId = combatInfo.fightId;
+                this.currentFightFighters.clear();
+                
+                // Ajouter tous les combattants de cette ligne
+                for (const fighter of combatInfo.fighters) {
+                  this.currentFightFighters.set(fighter.playerName, fighter);
+                }
+                
+                // Émettre l'événement avec les informations du combattant
+                this.emit('combatStarted', combatInfo);
+              } else {
+                // Même combat, ajouter les nouveaux combattants
+                for (const fighter of combatInfo.fighters) {
+                  if (!this.currentFightFighters.has(fighter.playerName)) {
+                    this.currentFightFighters.set(fighter.playerName, fighter);
+                    // Émettre un événement pour chaque nouveau combattant
+                    this.emit('fighterJoined', {
+                      fightId: combatInfo.fightId,
+                      fighter
+                    });
+                  }
+                }
+              }
+            } else {
+              // Ancien pattern (pour compatibilité)
+              this.emit('combatStarted');
+            }
           }
 
+          // Détection de la fin de combat
           if (LogParser.isCombatEnd(trimmed)) {
-            this.emit('combatEnded');
+            const fightId = LogParser.parseCombatEnd(trimmed);
+            if (fightId !== null) {
+              // Nouveau pattern avec fightId
+              this.emit('combatEnded', fightId);
+            } else {
+              // Ancien pattern (pour compatibilité)
+              this.emit('combatEnded');
+            }
+            
+            // Réinitialiser l'état du combat
+            this.currentFightId = null;
+            this.currentFightFighters.clear();
           }
         }
 
