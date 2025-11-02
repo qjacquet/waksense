@@ -18,6 +18,11 @@ let logMonitor: LogMonitor | null = null;
 let combatLogMonitor: LogMonitor | null = null; // LogMonitor pour wakfu.log (événements de combat)
 
 const detectedClasses: Map<string, ClassDetection> = new Map();
+// Mapping partagé playerName -> fighterId pour la détection de début de tour
+const playerNameToFighterId: Map<string, number> = new Map();
+const fighterIdToFighter: Map<number, CombatStartInfo['fighters'][0]> = new Map();
+// Dernier fighterId qui avait son tracker ouvert (pour le masquer au début du tour suivant)
+let lastActiveFighterId: number | null = null;
 
 /**
  * Ferme tous les trackers de combat
@@ -181,6 +186,10 @@ function startCombatLogMonitoring(logFilePath: string): void {
         detectionOverlay.show();
       }
       
+      // Synchroniser les mappings avec logMonitor pour la détection de début de tour
+      playerNameToFighterId.clear();
+      fighterIdToFighter.clear();
+      
       // Nouveau pattern : détecter les combattants et mettre à jour la liste des personnages
       for (const fighter of combatInfo.fighters) {
         if (fighter.className) {
@@ -190,6 +199,12 @@ function startCombatLogMonitoring(logFilePath: string): void {
             className: fighter.className,
             playerName: fighter.playerName
           });
+          
+          // Synchroniser les mappings pour la détection de début de tour
+          if (fighter.fighterId !== undefined) {
+            playerNameToFighterId.set(fighter.playerName, fighter.fighterId);
+            fighterIdToFighter.set(fighter.fighterId, fighter);
+          }
           
           // Notifier la détection de classe pour l'overlay et le launcher
           // Cela va mettre à jour la liste des personnages
@@ -204,12 +219,17 @@ function startCombatLogMonitoring(logFilePath: string): void {
           });
         }
       }
+      
+      // Synchroniser les mappings avec logMonitor pour qu'il puisse détecter le début de tour
+      if (logMonitor) {
+        logMonitor.syncFighterMappings(playerNameToFighterId, fighterIdToFighter);
+      }
     }
     
     WindowManager.safeSendToWindow(launcherWindow, 'combat-started');
   });
 
-  combatLogMonitor.on('fighterJoined', (data: { fightId: number; fighter: { playerName: string; breed: number; className: string | null } }) => {
+  combatLogMonitor.on('fighterJoined', (data: { fightId: number; fighter: { playerName: string; breed: number; className: string | null; fighterId?: number } }) => {
     // Un nouveau combattant a rejoint le combat - mettre à jour la liste des personnages
     if (data.fighter.className) {
       // S'assurer que l'overlay existe et est visible
@@ -225,6 +245,17 @@ function startCombatLogMonitoring(logFilePath: string): void {
         className: data.fighter.className,
         playerName: data.fighter.playerName
       });
+      
+      // Synchroniser les mappings pour la détection de début de tour
+      if (data.fighter.fighterId !== undefined) {
+        playerNameToFighterId.set(data.fighter.playerName, data.fighter.fighterId);
+        fighterIdToFighter.set(data.fighter.fighterId, data.fighter);
+      }
+      
+      // Synchroniser les mappings avec logMonitor pour qu'il puisse détecter le début de tour
+      if (logMonitor) {
+        logMonitor.syncFighterMappings(playerNameToFighterId, fighterIdToFighter);
+      }
       
       // Notifier la détection de classe pour mettre à jour la liste
       WindowManager.safeSendToWindow(detectionOverlay, 'class-detected', {
@@ -242,6 +273,11 @@ function startCombatLogMonitoring(logFilePath: string): void {
   combatLogMonitor.on('combatEnded', (fightId?: number) => {
     // Fermer automatiquement tous les trackers à la fin du combat
     closeAllTrackers();
+    
+    // Réinitialiser les mappings
+    playerNameToFighterId.clear();
+    fighterIdToFighter.clear();
+    lastActiveFighterId = null;
     
     // Masquer l'overlay de la liste des personnages à la fin du combat
     if (detectionOverlay && !detectionOverlay.isDestroyed() && detectionOverlay.isVisible()) {
@@ -276,6 +312,92 @@ function startLogMonitoring(logFilePath: string): void {
 
   // Note: Les événements de combat (combatStarted, combatEnded) sont maintenant gérés par combatLogMonitor
   // qui surveille wakfu.log. Ce logMonitor surveille wakfu_chat.log pour les sorts.
+
+  // Détection du début de tour - ouvrir automatiquement le tracker
+  logMonitor.on('turnStarted', (data: { fighterId: number; fighter: { playerName: string; className: string | null } }) => {
+    if (data.fighter && data.fighter.className) {
+      const trackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}`;
+      
+      // Gestion spéciale pour Iop (boosts + combos)
+      if (data.fighter.className === 'Iop') {
+        const boostsTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-boosts`;
+        const combosTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-combos`;
+        
+        // Si les trackers n'existent pas, les créer
+        if (!WindowManager.hasWindow(boostsTrackerId)) {
+          WindowManager.createTrackerWindow(boostsTrackerId, 'boosts.html', 'iop', {
+            width: 240,
+            height: 180,
+            resizable: true,
+            rendererName: 'IOP BOOSTS'
+          });
+        } else {
+          const boostsWindow = WindowManager.getWindow(boostsTrackerId);
+          if (boostsWindow && !boostsWindow.isDestroyed()) {
+            boostsWindow.show();
+            boostsWindow.focus();
+          }
+        }
+        
+        if (!WindowManager.hasWindow(combosTrackerId)) {
+          const boostsWindow = WindowManager.getWindow(boostsTrackerId);
+          const combosWindow = WindowManager.createTrackerWindow(combosTrackerId, 'combos.html', 'iop', {
+            width: 240,
+            height: 180,
+            resizable: true,
+            rendererName: 'IOP COMBOS'
+          });
+          
+          // Positionner le combos à côté du boosts
+          if (boostsWindow && combosWindow && !boostsWindow.isDestroyed() && !combosWindow.isDestroyed()) {
+            const boostsBounds = boostsWindow.getBounds();
+            combosWindow.setPosition(boostsBounds.x + boostsBounds.width + 10, boostsBounds.y);
+          }
+        } else {
+          const combosWindow = WindowManager.getWindow(combosTrackerId);
+          if (combosWindow && !combosWindow.isDestroyed()) {
+            combosWindow.show();
+            combosWindow.focus();
+          }
+        }
+      } else {
+        // Pour les autres classes, créer le tracker standard
+        if (!WindowManager.hasWindow(trackerId)) {
+          WindowManager.createTrackerWindow(trackerId, 'index.html', data.fighter.className, {
+            width: 320,
+            height: 200,
+            resizable: false
+          });
+        } else {
+          // Si le tracker existe déjà, s'assurer qu'il est visible
+          const window = WindowManager.getWindow(trackerId);
+          if (window && !window.isDestroyed()) {
+            window.show();
+            window.focus();
+          }
+        }
+      }
+      
+      // Mémoriser le fighterId actif pour le masquer au prochain tour
+      lastActiveFighterId = data.fighterId;
+      
+      ensureLogMonitoring();
+    }
+  });
+
+  // Détection de la fin de tour - masquer tous les trackers
+  logMonitor.on('turnEnded', () => {
+    // Masquer tous les trackers actuellement visibles
+    const allWindows = WindowManager.getAllWindows();
+    for (const [id, window] of allWindows) {
+      if (id.startsWith('tracker-') && window && !window.isDestroyed() && window.isVisible()) {
+        window.hide();
+      }
+    }
+    
+    // Réinitialiser le dernier fighterId actif
+    lastActiveFighterId = null;
+  });
 
   logMonitor.on('logLine', (line: string, parsed: any) => {
     const trackerWindows = WindowManager.getAllWindows();

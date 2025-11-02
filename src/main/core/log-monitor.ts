@@ -22,6 +22,9 @@ export class LogMonitor extends EventEmitter {
   private checkInterval: NodeJS.Timeout | null = null;
   private currentFightId: number | null = null;
   private currentFightFighters: Map<string, CombatStartInfo['fighters'][0]> = new Map(); // key = playerName
+  private fighterIdToFighter: Map<number, CombatStartInfo['fighters'][0]> = new Map(); // key = fighterId
+  private lastSpellCasterFighterId: number | null = null; // Dernier fighterId qui a lancé un sort
+  private playerNameToFighterId: Map<string, number> = new Map(); // Mapping playerName -> fighterId
 
   constructor(logFilePath: string, enableDeduplication: boolean = true) {
     super();
@@ -142,10 +145,18 @@ export class LogMonitor extends EventEmitter {
                 // Nouveau combat ou changement de combat
                 this.currentFightId = combatInfo.fightId;
                 this.currentFightFighters.clear();
+                this.fighterIdToFighter.clear();
+                this.playerNameToFighterId.clear();
+                this.lastSpellCasterFighterId = null;
                 
                 // Ajouter tous les combattants de cette ligne
                 for (const fighter of combatInfo.fighters) {
                   this.currentFightFighters.set(fighter.playerName, fighter);
+                  // Ajouter le mapping fighterId -> Fighter
+                  if (fighter.fighterId !== undefined) {
+                    this.fighterIdToFighter.set(fighter.fighterId, fighter);
+                    this.playerNameToFighterId.set(fighter.playerName, fighter.fighterId);
+                  }
                 }
                 
                 // Émettre l'événement avec les informations du combattant
@@ -155,6 +166,11 @@ export class LogMonitor extends EventEmitter {
                 for (const fighter of combatInfo.fighters) {
                   if (!this.currentFightFighters.has(fighter.playerName)) {
                     this.currentFightFighters.set(fighter.playerName, fighter);
+                    // Ajouter le mapping fighterId -> Fighter
+                    if (fighter.fighterId !== undefined) {
+                      this.fighterIdToFighter.set(fighter.fighterId, fighter);
+                      this.playerNameToFighterId.set(fighter.playerName, fighter.fighterId);
+                    }
                     // Émettre un événement pour chaque nouveau combattant
                     this.emit('fighterJoined', {
                       fightId: combatInfo.fightId,
@@ -174,6 +190,36 @@ export class LogMonitor extends EventEmitter {
             }
           }
 
+          // Détection du début de tour : quand un nouveau fighter lance son premier sort
+          if (parsed.isSpellCast && parsed.spellCast) {
+            const playerName = parsed.spellCast.playerName;
+            const fighterId = this.playerNameToFighterId.get(playerName);
+            
+            // Si on a un fighterId pour ce joueur et que c'est différent du dernier qui a lancé un sort
+            // Alors c'est le début du tour de ce fighter
+            if (fighterId !== undefined && fighterId !== this.lastSpellCasterFighterId) {
+              const fighter = this.fighterIdToFighter.get(fighterId);
+              if (fighter) {
+                // Nouveau fighter qui lance son premier sort = début de tour
+                this.lastSpellCasterFighterId = fighterId;
+                this.emit('turnStarted', {
+                  fighterId,
+                  fighter
+                });
+              }
+            } else if (fighterId !== undefined && fighterId === this.lastSpellCasterFighterId) {
+              // Même fighter qui lance un autre sort, pas de début de tour
+              // On garde juste la trace
+            }
+          }
+
+          // Détection de la fin de tour
+          if (trimmed.includes('secondes reportées pour le tour suivant') || 
+              trimmed.includes('reportées pour le tour suivant')) {
+            // Émettre un événement pour masquer tous les trackers
+            this.emit('turnEnded');
+          }
+
           // Détection de la fin de combat
           if (LogParser.isCombatEnd(trimmed)) {
             const fightId = LogParser.parseCombatEnd(trimmed);
@@ -188,6 +234,9 @@ export class LogMonitor extends EventEmitter {
             // Réinitialiser l'état du combat
             this.currentFightId = null;
             this.currentFightFighters.clear();
+            this.fighterIdToFighter.clear();
+            this.playerNameToFighterId.clear();
+            this.lastSpellCasterFighterId = null;
           }
         }
 
@@ -223,6 +272,23 @@ export class LogMonitor extends EventEmitter {
   setDeduplicationDebug(enabled: boolean): void {
     if (this.deduplicator) {
       this.deduplicator.setDebugMode(enabled);
+    }
+  }
+
+  /**
+   * Synchronise les mappings fighterId depuis l'extérieur
+   * Utilisé pour partager les mappings entre logMonitor (wakfu_chat.log) et combatLogMonitor (wakfu.log)
+   */
+  syncFighterMappings(playerNameToFighterId: Map<string, number>, fighterIdToFighter: Map<number, CombatStartInfo['fighters'][0]>): void {
+    this.playerNameToFighterId.clear();
+    this.fighterIdToFighter.clear();
+    
+    for (const [playerName, fighterId] of playerNameToFighterId.entries()) {
+      this.playerNameToFighterId.set(playerName, fighterId);
+    }
+    
+    for (const [fighterId, fighter] of fighterIdToFighter.entries()) {
+      this.fighterIdToFighter.set(fighterId, fighter);
     }
   }
 }

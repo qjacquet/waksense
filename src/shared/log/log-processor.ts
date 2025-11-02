@@ -21,6 +21,7 @@ export interface Fighter {
   playerName: string;
   breed: number;
   className: string | null; // null si la classe n'est pas connue
+  fighterId?: number; // Identifiant unique du fighter dans le combat
 }
 
 export interface CombatStartInfo {
@@ -140,17 +141,19 @@ export class LogParser {
    * - isControlledByAI=true (c'est un monstre, pas un joueur)
    */
   static parseCombatStart(line: string): CombatStartInfo | null {
-    // Pattern: [_FL_] fightId=<id> <nom> breed : <numéro> ... isControlledByAI=<bool>
+    // Pattern: [_FL_] fightId=<id> <nom> breed : <numéro> [<fighterId>] ... isControlledByAI=<bool>
     // Exemple: INFO ... - [_FL_] fightId=1552072008 Astra Gladia breed : 8 [7595487] isControlledByAI=false ...
     // Le nom peut contenir des espaces, donc on prend tout jusqu'à "breed :"
-    const pattern = /\[_FL_\]\s+fightId=(\d+)\s+(.+?)\s+breed\s*:\s*(\d+)\s+.*?isControlledByAI=(true|false)/;
+    // Le fighterId est le nombre entre crochets après breed
+    const pattern = /\[_FL_\]\s+fightId=(\d+)\s+(.+?)\s+breed\s*:\s*(\d+)\s+\[(\d+)\]\s+.*?isControlledByAI=(true|false)/;
     const match = line.match(pattern);
     
     if (match) {
       const fightId = parseInt(match[1], 10);
       const playerName = match[2].trim();
       const breed = parseInt(match[3], 10);
-      const isControlledByAI = match[4] === 'true';
+      const fighterId = parseInt(match[4], 10);
+      const isControlledByAI = match[5] === 'true';
       
       // Ne garder que les joueurs (isControlledByAI=false), pas les monstres
       if (isControlledByAI) {
@@ -164,7 +167,8 @@ export class LogParser {
         fighters: [{
           playerName,
           breed,
-          className
+          className,
+          fighterId
         }]
       };
     }
@@ -195,6 +199,29 @@ export class LogParser {
     
     if (match) {
       return parseInt(match[1], 10);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extrait le fighterId depuis une ligne de log de sort lancé
+   * Pattern peut être dans la ligne de sort ou dans les logs de combat
+   * Cette méthode cherche le fighterId dans différents formats possibles
+   */
+  static extractFighterIdFromSpellLine(line: string): number | null {
+    // Pattern 1: fighterId=XXXX dans la ligne
+    const pattern1 = /fighterId[=:](\d+)/i;
+    const match1 = line.match(pattern1);
+    if (match1) {
+      return parseInt(match1[1], 10);
+    }
+
+    // Pattern 2: [XXXX] dans la ligne (si c'est un fighterId)
+    const pattern2 = /\[(\d+)\]/;
+    const match2 = line.match(pattern2);
+    if (match2) {
+      return parseInt(match2[1], 10);
     }
     
     return null;
