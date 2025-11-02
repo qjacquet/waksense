@@ -27,12 +27,43 @@ export function updateProgressBar(
 }
 
 /**
- * Met à jour un indicateur de stack
+ * Met à jour un indicateur de stack simple (sans max)
  */
-export function updateStackIndicator(elementId: string, current: number, max: number, label: string): void {
+export function updateSingleStackIndicator(
+  elementId: string,
+  current: number,
+  label: string,
+  inactiveDisplay: 'none' | 'block' = 'none'
+): void {
   const element = document.getElementById(elementId);
   if (element) {
-    element.textContent = current > 0 ? `${label}: ${current}/${max}` : '';
+    if (current > 0) {
+      element.textContent = `${label}: ${current}`;
+      element.style.display = 'block';
+    } else {
+      element.style.display = inactiveDisplay;
+    }
+  }
+}
+
+/**
+ * Met à jour un indicateur de stack
+ */
+export function updateStackIndicator(
+  elementId: string,
+  current: number,
+  max: number,
+  label: string,
+  inactiveDisplay: 'none' | 'block' = 'none'
+): void {
+  const element = document.getElementById(elementId);
+  if (element) {
+    if (current > 0) {
+      element.textContent = `${label}: ${current}/${max}`;
+      element.style.display = 'block';
+    } else {
+      element.style.display = inactiveDisplay;
+    }
   }
 }
 
@@ -48,8 +79,8 @@ export function updateBooleanIndicator(
   const element = document.getElementById(elementId);
   if (element) {
     if (isActive) {
-      element.style.display = 'block';
       element.textContent = activeText;
+      element.style.display = 'block';
     } else {
       element.style.display = inactiveDisplay;
     }

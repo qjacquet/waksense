@@ -3,7 +3,7 @@
  * Concentration, Courroux, Puissance, Préparation, Égaré
  */
 
-import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers.js';
+import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator, updateSingleStackIndicator } from '../../core/ui-helpers.js';
 
 class IopBoostsTracker {
   private concentration: number = 0;
@@ -244,15 +244,10 @@ class IopBoostsTracker {
 
   private updateUI(): void {
     updateProgressBar('concentration-fill', 'concentration-value', this.concentration, 100);
-    updateStackIndicator('courroux-stacks', this.courroux, 4, 'Courroux');
-    updateStackIndicator('puissance-stacks', this.puissance, 50, 'Puissance');
-    
-    const prepElement = document.getElementById('preparation-stacks');
-    if (prepElement) {
-      prepElement.textContent = this.preparation > 0 ? `Préparation: ${this.preparation}` : '';
-    }
-    
-    updateBooleanIndicator('egare-indicator', this.egare && this.inCombat, 'Égaré actif');
+    updateStackIndicator('courroux-stacks', this.courroux, 4, 'Courroux', 'none');
+    updateStackIndicator('puissance-stacks', this.puissance, 50, 'Puissance', 'none');
+    updateSingleStackIndicator('preparation-stacks', this.preparation, 'Préparation', 'none');
+    updateBooleanIndicator('egare-indicator', this.egare && this.inCombat, 'Égaré actif', 'none');
   }
 }
 
