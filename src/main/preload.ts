@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDeduplicationStats: () => ipcRenderer.invoke('get-deduplication-stats'),
   getDetectedClasses: () => ipcRenderer.invoke('get-detected-classes'),
   
+  // Assets
+  getAssetPath: (...pathSegments: string[]) => ipcRenderer.invoke('get-asset-path', ...pathSegments),
+  
   // Événements du main process
   onClassDetected: (callback: (detection: { className: string; playerName: string }) => void) => {
     ipcRenderer.on('class-detected', (_event, detection) => {
@@ -73,6 +76,7 @@ declare global {
       closeTracker: (trackerId: string) => Promise<void>;
       getDeduplicationStats: () => Promise<any>;
       getDetectedClasses: () => Promise<Array<{ className: string; playerName: string }>>;
+      getAssetPath: (...pathSegments: string[]) => Promise<string>;
       onClassDetected: (callback: (detection: { className: string; playerName: string }) => void) => void;
       onCombatStarted: (callback: () => void) => void;
       onCombatEnded: (callback: () => void) => void;

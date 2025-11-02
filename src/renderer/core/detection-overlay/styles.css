@@ -68,7 +68,10 @@ html, body {
 .class-icon {
   font-size: 16px;
   width: 24px;
+  height: 24px;
   text-align: center;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .class-name {

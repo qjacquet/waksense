@@ -2,7 +2,8 @@
  * IPC Handlers - Gestionnaires IPC pour la communication main/renderer
  */
 
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, app } from 'electron';
+import * as path from 'path';
 import { Config } from '../core/config';
 import { WindowManager } from '../windows/window-manager';
 import { LogMonitor, ClassDetection } from '../core/log-monitor';
@@ -27,7 +28,8 @@ export function setupIpcHandlers(
     'create-tracker',
     'close-tracker',
     'get-deduplication-stats',
-    'get-detected-classes'
+    'get-detected-classes',
+    'get-asset-path'
   ];
   
   handlers.forEach(handler => {
@@ -187,6 +189,21 @@ export function setupIpcHandlers(
 
   ipcMain.handle('get-detected-classes', () => {
     return Array.from(detectedClasses.values());
+  });
+
+  // Assets
+  ipcMain.handle('get-asset-path', (_event, ...pathSegments: string[]) => {
+    const appPath = app.getAppPath();
+    const assetsPath = path.join(appPath, 'assets', ...pathSegments);
+    // Retourner une URL file:// formatée correctement
+    const normalizedPath = assetsPath.replace(/\\/g, '/');
+    if (normalizedPath.match(/^[A-Z]:/)) {
+      // Chemin Windows -> file:///C:/path/to/file
+      return `file:///${normalizedPath}`;
+    } else {
+      // Chemin Unix -> file:///path/to/file
+      return `file://${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath}`;
+    }
   });
 }
 

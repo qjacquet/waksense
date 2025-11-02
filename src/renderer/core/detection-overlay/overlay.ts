@@ -72,7 +72,7 @@ class DetectionOverlay {
     document.body.style.display = 'block';
   }
 
-  private createClassButton(className: ClassType, playerName: string, buttonKey: string): void {
+  private async createClassButton(className: ClassType, playerName: string, buttonKey: string): Promise<void> {
     if (!this.classesContainer) {
       console.error('[OVERLAY] Classes container not found');
       return;
@@ -82,14 +82,17 @@ class DetectionOverlay {
     container.className = 'class-item';
     container.dataset.buttonKey = buttonKey;
 
-    const icon = document.createElement('span');
+    const icon = document.createElement('img');
     icon.className = 'class-icon';
-    icon.textContent = className === 'Iop' ? '⚔' : className === 'Cra' ? '🏹' : '🐕';
+    const classNameLower = className.toLowerCase();
+    
+    icon.src = `../../../../assets/classes/${classNameLower}/icon.png`;
+    icon.alt = className;
 
     const name = document.createElement('span');
     name.className = 'class-name';
     name.textContent = playerName;
-    name.classList.add(`class-${className.toLowerCase()}`);
+    name.classList.add(`class-${classNameLower}`);
 
     const button = document.createElement('button');
     button.className = 'class-button';

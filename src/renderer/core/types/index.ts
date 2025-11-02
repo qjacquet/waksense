@@ -17,6 +17,7 @@ declare global {
       closeTracker: (trackerId: string) => Promise<void>;
       getDeduplicationStats: () => Promise<any>;
       getDetectedClasses: () => Promise<Array<{ className: string; playerName: string }>>;
+      getAssetPath: (...pathSegments: string[]) => Promise<string>;
       onClassDetected: (callback: (detection: { className: string; playerName: string }) => void) => void;
       onCombatStarted: (callback: () => void) => void;
       onCombatEnded: (callback: () => void) => void;
