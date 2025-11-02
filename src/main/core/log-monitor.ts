@@ -137,8 +137,9 @@ export class LogMonitor extends EventEmitter {
           if (LogParser.isCombatStart(trimmed)) {
             const combatInfo = LogParser.parseCombatStart(trimmed);
             if (combatInfo) {
-              // Nouveau combat détecté (nouveau fightId)
-              if (this.currentFightId !== combatInfo.fightId) {
+              // Nouveau combat détecté (nouveau fightId) ou combat en cours
+              if (this.currentFightId === null || this.currentFightId !== combatInfo.fightId) {
+                // Nouveau combat ou changement de combat
                 this.currentFightId = combatInfo.fightId;
                 this.currentFightFighters.clear();
                 
@@ -163,8 +164,13 @@ export class LogMonitor extends EventEmitter {
                 }
               }
             } else {
-              // Ancien pattern (pour compatibilité)
-              this.emit('combatStarted');
+              // parseCombatStart a retourné null (monstre ou pattern non matché)
+              // Mais isCombatStart retourne true, donc c'est peut-être un ancien pattern
+              // Vérifier si c'est l'ancien pattern
+              if (!trimmed.includes('[_FL_]')) {
+                // Ancien pattern (pour compatibilité)
+                this.emit('combatStarted');
+              }
             }
           }
 

@@ -11,9 +11,10 @@ export type ClassType = 'Iop' | 'Cra' | 'Ouginak';
  */
 export const BREED_TO_CLASS_MAP: Map<number, ClassType> = new Map([
   [8, 'Iop'],
+  [9, 'Cra'],
   // Note: Les autres numéros de breed peuvent être ajoutés au fur et à mesure
-  // breed 9 = Cra (approximatif)
   // breed 11 = Ouginak (approximatif)
+  // breed 12 = ? (à identifier selon les logs)
   // Ces valeurs sont à confirmer avec les logs réels
 ]);
 
