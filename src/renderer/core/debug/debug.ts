@@ -150,6 +150,49 @@ class DebugUI {
         default: false,
       },
     ],
+    "iop/jauge.html": [
+      {
+        id: "concentration",
+        label: "Concentration",
+        type: "slider",
+        min: 0,
+        max: 100,
+        default: 0,
+      },
+      {
+        id: "courroux",
+        label: "Courroux Actif",
+        type: "checkbox",
+        default: false,
+      },
+      {
+        id: "puissance",
+        label: "Puissance",
+        type: "slider",
+        min: 0,
+        max: 50,
+        default: 0,
+      },
+      {
+        id: "preparation",
+        label: "Préparation Actif",
+        type: "checkbox",
+        default: false,
+      },
+      { id: "egare", label: "Égaré Actif", type: "checkbox", default: false },
+      {
+        id: "activePosture",
+        label: "Posture",
+        type: "select",
+        default: "",
+        options: [
+          { value: "", label: "Aucune" },
+          { value: "contre", label: "Posture de contre" },
+          { value: "défense", label: "Posture de défense" },
+          { value: "vivacité", label: "Posture de vivacité" },
+        ],
+      },
+    ],
     "ouginak/index.html": [
       {
         id: "rage",

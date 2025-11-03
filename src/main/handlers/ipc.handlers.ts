@@ -115,33 +115,46 @@ export function setupIpcHandlers(
       if (className.toLowerCase() === "iop") {
         const boostsTrackerId = `tracker-${className}-${playerName}-boosts`;
         const combosTrackerId = `tracker-${className}-${playerName}-combos`;
+        const jaugeTrackerId = `tracker-${className}-${playerName}-jauge`;
 
         const boostsExists = WindowManager.hasWindow(boostsTrackerId);
         const combosExists = WindowManager.hasWindow(combosTrackerId);
+        const jaugeExists = WindowManager.hasWindow(jaugeTrackerId);
 
-        if (combosExists) {
+        if (jaugeExists || combosExists) {
           const boostsWindow = boostsExists
             ? WindowManager.getWindow(boostsTrackerId)
             : undefined;
-          const combosWindow = WindowManager.getWindow(combosTrackerId);
+          const combosWindow = combosExists
+            ? WindowManager.getWindow(combosTrackerId)
+            : undefined;
+          const jaugeWindow = jaugeExists
+            ? WindowManager.getWindow(jaugeTrackerId)
+            : undefined;
           const isCurrentlyVisible =
-            combosWindow?.isVisible() || (boostsWindow?.isVisible() ?? false);
+            (jaugeWindow?.isVisible() ?? false) ||
+            (combosWindow?.isVisible() ?? false) ||
+            (boostsWindow?.isVisible() ?? false);
 
           if (isCurrentlyVisible) {
             boostsWindow?.hide();
             combosWindow?.hide();
+            jaugeWindow?.hide();
           } else {
             boostsWindow?.show();
             boostsWindow?.focus();
             combosWindow?.show();
             combosWindow?.focus();
+            jaugeWindow?.show();
+            jaugeWindow?.focus();
           }
 
-          return `${boostsTrackerId},${combosTrackerId}:${!isCurrentlyVisible}`;
+          return `${boostsTrackerId},${combosTrackerId},${jaugeTrackerId}:${!isCurrentlyVisible}`;
         }
 
         let boostsWindow: BrowserWindow | undefined;
         let combosWindow: BrowserWindow | undefined;
+        let jaugeWindow: BrowserWindow | undefined;
 
         if (boostsExists) {
           boostsWindow = WindowManager.getWindow(boostsTrackerId);
@@ -156,11 +169,34 @@ export function setupIpcHandlers(
               rendererName: "IOP COMBOS",
             }
           );
+          jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            "iop",
+            {
+              width: 300,
+              height: 300,
+              resizable: true,
+              rendererName: "IOP JAUGE",
+            }
+          );
           if (boostsWindow?.isVisible()) {
             combosWindow?.show();
+            jaugeWindow?.show();
           }
         } else if (combosExists) {
           combosWindow = WindowManager.getWindow(combosTrackerId);
+          jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            "iop",
+            {
+              width: 300,
+              height: 300,
+              resizable: true,
+              rendererName: "IOP JAUGE",
+            }
+          );
         } else {
           combosWindow = WindowManager.createTrackerWindow(
             combosTrackerId,
@@ -171,6 +207,17 @@ export function setupIpcHandlers(
               height: 180,
               resizable: true,
               rendererName: "IOP COMBOS",
+            }
+          );
+          jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            "iop",
+            {
+              width: 300,
+              height: 300,
+              resizable: true,
+              rendererName: "IOP JAUGE",
             }
           );
         }
@@ -188,16 +235,32 @@ export function setupIpcHandlers(
           );
         }
 
+        if (
+          combosWindow &&
+          jaugeWindow &&
+          !combosWindow.isDestroyed() &&
+          !jaugeWindow.isDestroyed()
+        ) {
+          const combosBounds = combosWindow.getBounds();
+          jaugeWindow.setPosition(
+            combosBounds.x + combosBounds.width + 10,
+            combosBounds.y
+          );
+        }
+
         ensureLogMonitoring();
 
         const isVisible =
+          (jaugeWindow &&
+            !jaugeWindow.isDestroyed() &&
+            jaugeWindow.isVisible()) ||
           (combosWindow &&
             !combosWindow.isDestroyed() &&
             combosWindow.isVisible()) ||
           (boostsWindow &&
             !boostsWindow.isDestroyed() &&
             boostsWindow.isVisible());
-        return `${boostsTrackerId},${combosTrackerId}:${isVisible}`;
+        return `${boostsTrackerId},${combosTrackerId},${jaugeTrackerId}:${isVisible}`;
       }
 
       const trackerId = `tracker-${className}-${playerName}`;

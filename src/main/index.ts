@@ -439,10 +439,11 @@ function startLogMonitoring(logFilePath: string): void {
       if (data.fighter && data.fighter.className) {
         const trackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}`;
 
-        // Gestion spéciale pour Iop (boosts + combos)
+        // Gestion spéciale pour Iop (boosts + combos + jauge)
         if (data.fighter.className === "Iop") {
           const boostsTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-boosts`;
           const combosTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-combos`;
+          const jaugeTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-jauge`;
 
           // Si les trackers n'existent pas, les créer
           if (!WindowManager.hasWindow(boostsTrackerId)) {
@@ -462,6 +463,17 @@ function startLogMonitoring(logFilePath: string): void {
             if (boostsWindow && !boostsWindow.isDestroyed()) {
               boostsWindow.show();
               boostsWindow.focus();
+            }
+            // Si boosts est affiché, afficher aussi combos et jauge s'ils existent
+            const combosWindow = WindowManager.getWindow(combosTrackerId);
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (boostsWindow?.isVisible() && combosWindow && !combosWindow.isDestroyed()) {
+              combosWindow.show();
+              combosWindow.focus();
+            }
+            if (boostsWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
             }
           }
 
@@ -492,11 +504,92 @@ function startLogMonitoring(logFilePath: string): void {
                 boostsBounds.y
               );
             }
+
+            // Afficher le combos si boosts est visible
+            if (
+              boostsWindow?.isVisible() &&
+              combosWindow &&
+              !combosWindow.isDestroyed()
+            ) {
+              combosWindow.show();
+              combosWindow.focus();
+            }
+
+            // Si la jauge existe déjà, l'afficher aussi et la repositionner
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (
+              jaugeWindow &&
+              !jaugeWindow.isDestroyed() &&
+              combosWindow &&
+              !combosWindow.isDestroyed()
+            ) {
+              const combosBounds = combosWindow.getBounds();
+              jaugeWindow.setPosition(
+                combosBounds.x + combosBounds.width + 10,
+                combosBounds.y
+              );
+              if (boostsWindow?.isVisible() || combosWindow.isVisible()) {
+                jaugeWindow.show();
+                jaugeWindow.focus();
+              }
+            }
           } else {
             const combosWindow = WindowManager.getWindow(combosTrackerId);
             if (combosWindow && !combosWindow.isDestroyed()) {
               combosWindow.show();
               combosWindow.focus();
+            }
+            // Si combos est affiché, afficher aussi jauge si elle existe
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (combosWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
+            }
+          }
+
+          if (!WindowManager.hasWindow(jaugeTrackerId)) {
+            const combosWindow = WindowManager.getWindow(combosTrackerId);
+            const boostsWindow = WindowManager.getWindow(boostsTrackerId);
+            const jaugeWindow = WindowManager.createTrackerWindow(
+              jaugeTrackerId,
+              "jauge.html",
+              "iop",
+              {
+                width: 300,
+                height: 300,
+                resizable: true,
+                rendererName: "IOP JAUGE",
+              }
+            );
+
+            // Positionner la jauge à côté du combos
+            if (
+              combosWindow &&
+              jaugeWindow &&
+              !combosWindow.isDestroyed() &&
+              !jaugeWindow.isDestroyed()
+            ) {
+              const combosBounds = combosWindow.getBounds();
+              jaugeWindow.setPosition(
+                combosBounds.x + combosBounds.width + 10,
+                combosBounds.y
+              );
+            }
+
+            // Afficher la jauge si les autres trackers sont visibles
+            if (
+              (boostsWindow?.isVisible() || combosWindow?.isVisible()) &&
+              jaugeWindow &&
+              !jaugeWindow.isDestroyed()
+            ) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
+            }
+          } else {
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
             }
           }
         } else {

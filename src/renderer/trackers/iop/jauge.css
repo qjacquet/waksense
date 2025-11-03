@@ -1,0 +1,391 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.jauge-overlay {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  /* Permettre le déplacement de la fenêtre */
+  -webkit-app-region: drag;
+}
+
+.iop-logo {
+  width: 200px;
+  height: 200px;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
+
+/* Base layer - toujours visible */
+.base-layer {
+  display: block;
+}
+
+.base-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #ffffff;
+}
+
+/* État par défaut (hors combat) */
+.iop-logo.inactive .base-path {
+  fill: #666666;
+  opacity: 0.3;
+}
+
+.iop-logo.inactive {
+  opacity: 0.3;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.3));
+}
+
+/* SVG Layers - Positionnement en superposition */
+.svg-layer {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  mix-blend-mode: screen;
+}
+
+/* Concentration layer - Bleu */
+.concentration-layer {
+  mix-blend-mode: screen;
+}
+
+.concentration-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #2196f3;
+}
+
+.concentration-layer.active {
+  display: block;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 15px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 8px rgba(33, 150, 243, 0.4));
+}
+
+.concentration-layer.active.concentration-low {
+  opacity: 0.4;
+  filter: drop-shadow(0 0 10px rgba(33, 150, 243, 0.4))
+    drop-shadow(0 0 5px rgba(33, 150, 243, 0.2));
+}
+
+.concentration-layer.active.concentration-low .concentration-path {
+  fill: #64b5f6; /* Bleu plus clair pour faible valeur */
+}
+
+.concentration-layer.active.concentration-medium {
+  opacity: 0.6;
+  filter: drop-shadow(0 0 15px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 8px rgba(33, 150, 243, 0.4));
+}
+
+.concentration-layer.active.concentration-medium .concentration-path {
+  fill: #2196f3; /* Bleu standard */
+}
+
+.concentration-layer.active.concentration-high {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.9))
+    drop-shadow(0 0 15px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 8px rgba(33, 150, 243, 0.4));
+  animation: concentrationPulse 2s ease-in-out infinite;
+}
+
+.concentration-layer.active.concentration-high .concentration-path {
+  fill: #1976d2; /* Bleu plus intense pour haute valeur */
+}
+
+@keyframes concentrationPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.9))
+      drop-shadow(0 0 15px rgba(33, 150, 243, 0.6))
+      drop-shadow(0 0 8px rgba(33, 150, 243, 0.4));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 35px rgba(33, 150, 243, 1))
+      drop-shadow(0 0 20px rgba(33, 150, 243, 0.8))
+      drop-shadow(0 0 10px rgba(33, 150, 243, 0.5));
+    opacity: 1;
+  }
+}
+
+/* Courroux layer - Rouge/Orange */
+.courroux-layer {
+  mix-blend-mode: screen;
+}
+
+.courroux-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #ff5722;
+}
+
+.courroux-layer.active {
+  display: block;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 20px rgba(255, 87, 34, 0.8))
+    drop-shadow(0 0 10px rgba(255, 87, 34, 0.5));
+  animation: courrouxPulse 1.5s ease-in-out infinite;
+}
+
+.courroux-layer.active .courroux-path {
+  fill: #ff5722; /* Orange/Rouge intense */
+}
+
+@keyframes courrouxPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 20px rgba(255, 87, 34, 0.8))
+      drop-shadow(0 0 10px rgba(255, 87, 34, 0.5));
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(255, 87, 34, 1))
+      drop-shadow(0 0 15px rgba(255, 87, 34, 0.7))
+      drop-shadow(0 0 5px rgba(255, 87, 34, 0.4));
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+/* Puissance layer - Doré */
+.puissance-layer {
+  mix-blend-mode: screen;
+}
+
+.puissance-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #ffd700;
+}
+
+.puissance-layer.active {
+  display: block;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.7))
+    drop-shadow(0 0 9px rgba(255, 215, 0, 0.4));
+}
+
+.puissance-layer.active.puissance-low {
+  opacity: 0.5;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.4))
+    drop-shadow(0 0 5px rgba(255, 215, 0, 0.2));
+}
+
+.puissance-layer.active.puissance-low .puissance-path {
+  fill: #ffeb3b; /* Doré plus clair */
+}
+
+.puissance-layer.active.puissance-medium {
+  opacity: 0.7;
+  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 8px rgba(255, 215, 0, 0.3));
+}
+
+.puissance-layer.active.puissance-medium .puissance-path {
+  fill: #ffd700; /* Doré standard */
+}
+
+.puissance-layer.active.puissance-high {
+  opacity: 0.95;
+  filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 15px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+  animation: puissanceGlow 2s ease-in-out infinite;
+}
+
+.puissance-layer.active.puissance-high .puissance-path {
+  fill: #ffc107; /* Doré plus intense */
+}
+
+@keyframes puissanceGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.9))
+      drop-shadow(0 0 15px rgba(255, 215, 0, 0.6))
+      drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+    opacity: 0.95;
+  }
+  50% {
+    filter: drop-shadow(0 0 35px rgba(255, 215, 0, 1))
+      drop-shadow(0 0 20px rgba(255, 215, 0, 0.8))
+      drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+    opacity: 1;
+  }
+}
+
+/* Préparation layer - Vert */
+.preparation-layer {
+  mix-blend-mode: screen;
+}
+
+.preparation-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #4caf50;
+}
+
+.preparation-layer.active {
+  display: block;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 18px rgba(76, 175, 80, 0.8))
+    drop-shadow(0 0 9px rgba(76, 175, 80, 0.4));
+  animation: preparationGlow 2s ease-in-out infinite;
+}
+
+.preparation-layer.active .preparation-path {
+  fill: #4caf50; /* Vert standard */
+}
+
+@keyframes preparationGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 18px rgba(76, 175, 80, 0.8))
+      drop-shadow(0 0 9px rgba(76, 175, 80, 0.4));
+    opacity: 0.8;
+  }
+  50% {
+    filter: drop-shadow(0 0 28px rgba(76, 175, 80, 1))
+      drop-shadow(0 0 15px rgba(76, 175, 80, 0.6))
+      drop-shadow(0 0 5px rgba(76, 175, 80, 0.3));
+    opacity: 0.95;
+  }
+}
+
+/* Égaré layer - Rouge/Orange */
+.egare-layer {
+  mix-blend-mode: screen;
+}
+
+.egare-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #ff5722;
+}
+
+.egare-layer.active {
+  display: block;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 20px rgba(255, 87, 34, 0.8))
+    drop-shadow(0 0 10px rgba(255, 87, 34, 0.5));
+  animation: egarePulse 1.2s ease-in-out infinite;
+}
+
+.egare-layer.active .egare-path {
+  fill: #ff3d00; /* Rouge plus intense */
+}
+
+@keyframes egarePulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 20px rgba(255, 87, 34, 0.8))
+      drop-shadow(0 0 10px rgba(255, 87, 34, 0.5));
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(255, 87, 34, 1))
+      drop-shadow(0 0 15px rgba(255, 87, 34, 0.7))
+      drop-shadow(0 0 5px rgba(255, 87, 34, 0.4));
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* Posture layers */
+.posture-layer {
+  mix-blend-mode: screen;
+}
+
+.posture-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+}
+
+.posture-contre-layer.active {
+  display: block;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 18px rgba(244, 67, 54, 0.8))
+    drop-shadow(0 0 9px rgba(244, 67, 54, 0.4));
+}
+
+.posture-contre-layer.active .posture-path {
+  fill: #f44336; /* Rouge */
+}
+
+.posture-défense-layer.active {
+  display: block;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 18px rgba(76, 175, 80, 0.8))
+    drop-shadow(0 0 9px rgba(76, 175, 80, 0.4));
+}
+
+.posture-défense-layer.active .posture-path {
+  fill: #4caf50; /* Vert */
+}
+
+.posture-vivacité-layer.active {
+  display: block;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 18px rgba(156, 39, 176, 0.8))
+    drop-shadow(0 0 9px rgba(156, 39, 176, 0.4));
+}
+
+.posture-vivacité-layer.active .posture-path {
+  fill: #9c27b0; /* Violet */
+}
+
+/* Combinaisons d'effets - effet global sur le SVG avec multi-shadows */
+.iop-logo.has-concentration.has-courroux {
+  filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 20px rgba(255, 87, 34, 0.6))
+    drop-shadow(0 0 10px rgba(33, 150, 243, 0.3))
+    drop-shadow(0 0 10px rgba(255, 87, 34, 0.3));
+}
+
+.iop-logo.has-concentration.has-puissance {
+  filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 20px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 10px rgba(33, 150, 243, 0.3))
+    drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+}
+
+.iop-logo.has-concentration.has-preparation {
+  filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 18px rgba(76, 175, 80, 0.6))
+    drop-shadow(0 0 10px rgba(33, 150, 243, 0.3))
+    drop-shadow(0 0 9px rgba(76, 175, 80, 0.3));
+}
+
+.iop-logo.has-courroux.has-egare {
+  filter: drop-shadow(0 0 30px rgba(255, 87, 34, 1))
+    drop-shadow(0 0 15px rgba(255, 87, 34, 0.7))
+    drop-shadow(0 0 10px rgba(255, 87, 34, 0.5));
+}
+
+.iop-logo.has-puissance.has-preparation {
+  filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.8))
+    drop-shadow(0 0 18px rgba(76, 175, 80, 0.8))
+    drop-shadow(0 0 10px rgba(255, 215, 0, 0.4))
+    drop-shadow(0 0 9px rgba(76, 175, 80, 0.4));
+}
+
+/* Triple combinaisons */
+.iop-logo.has-concentration.has-courroux.has-puissance {
+  filter: drop-shadow(0 0 25px rgba(33, 150, 243, 0.6))
+    drop-shadow(0 0 20px rgba(255, 87, 34, 0.6))
+    drop-shadow(0 0 20px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 10px rgba(33, 150, 243, 0.3))
+    drop-shadow(0 0 10px rgba(255, 87, 34, 0.3))
+    drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+}
