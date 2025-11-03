@@ -279,6 +279,9 @@ class IopBoostsTracker {
   }
 
   private setupDebugMode(): void {
+    // En mode debug, on force inCombat à true pour que les indicateurs s'affichent
+    this.inCombat = true;
+
     window.addEventListener("message", (event) => {
       if (event.data.type === "debug-init") {
         // Initialiser avec toutes les valeurs
@@ -299,21 +302,25 @@ class IopBoostsTracker {
         switch (key) {
           case "concentration":
             this.concentration = Number(value);
+            this.updateUI();
             break;
           case "courroux":
             this.courroux = Number(value);
+            this.updateUI();
             break;
           case "puissance":
             this.puissance = Number(value);
+            this.updateUI();
             break;
           case "preparation":
             this.preparation = Number(value);
+            this.updateUI();
             break;
           case "egare":
             this.egare = Boolean(value);
+            this.updateUI();
             break;
         }
-        this.updateUI();
       }
     });
   }
