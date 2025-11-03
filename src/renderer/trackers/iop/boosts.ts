@@ -15,9 +15,11 @@ class IopBoostsTracker {
   private puissance: number = 0;
   private preparation: boolean = false;
   private egare: boolean = false;
+  private activePosture: "contre" | "défense" | "vivacité" | null = null;
 
   private inCombat: boolean = false;
   private trackedPlayerName: string | null = null;
+  private lastSpellCaster: string | null = null; // Dernier joueur qui a lancé un sort (pour détecter le début de tour)
 
   private debugMode: boolean = false;
 
@@ -46,6 +48,27 @@ class IopBoostsTracker {
     ["Étendard de bravoure", "3PA"],
     ["Vertu", "2PA"],
     ["Charge", "1PA"],
+  ]);
+
+  // Liste des sorts qui infligent des dégâts (pour la préparation)
+  private readonly damageSpells: Set<string> = new Set([
+    "Épée céleste",
+    "Fulgur",
+    "Super Iop Punch",
+    "Jugement",
+    "Colère de Iop",
+    "Ébranler",
+    "Roknocerok",
+    "Fendoir",
+    "Ravage",
+    "Jabs",
+    "Rafale",
+    "Torgnole",
+    "Tannée",
+    "Épée de Iop",
+    "Uppercut",
+    "Charge",
+    "Éventrail",
   ]);
 
   constructor() {
@@ -106,6 +129,8 @@ class IopBoostsTracker {
     this.puissance = 0;
     this.preparation = false;
     this.egare = false;
+    this.activePosture = null;
+    this.lastSpellCaster = null;
     this.updateUI();
   }
 
@@ -126,10 +151,16 @@ class IopBoostsTracker {
     // Parse Égaré
     this.parseEgare(line);
 
+    // Parse Postures (must be before spell casts)
+    this.parsePosture(line);
+
     // Parse spell consumption (after resource parsing to avoid resetting before gain)
     if (parsed.isSpellCast && parsed.spellCast) {
       this.handleSpellCast(parsed.spellCast, line);
     }
+
+    // Parse damage received (for posture deactivation)
+    this.parseDamage(line);
   }
 
   private parseConcentration(line: string): void {
@@ -226,6 +257,66 @@ class IopBoostsTracker {
         this.egare = false;
         this.updateUI();
       }
+
+      // Désactiver la posture à la fin du tour
+      // Si une posture est active, c'est forcément celle du joueur tracké qui vient de finir son tour
+      if (this.activePosture !== null) {
+        console.log(`[IOP BOOSTS] Fin de tour détectée, désactivation de la posture`);
+        this.activePosture = null;
+        this.updateUI();
+      }
+    }
+  }
+
+  private parsePosture(line: string): void {
+    // Only process combat lines
+    if (!line.includes("[Information (combat)]")) {
+      return;
+    }
+
+    // Détection de la perte de posture - "n'est plus sous l'emprise de 'Posture de contre/défense/vivacité'"
+    // (pour détecter les cas où la posture se termine avant le début du tour suivant)
+    if (
+      line.includes("n'est plus sous l'emprise de 'Posture de contre'") ||
+      line.includes("n'est plus sous l'emprise de 'Posture de défense'") ||
+      line.includes("n'est plus sous l'emprise de 'Posture de vivacité'")
+    ) {
+      const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
+      if (
+        playerMatch &&
+        this.trackedPlayerName &&
+        playerMatch[1].trim() === this.trackedPlayerName.trim()
+      ) {
+        this.activePosture = null;
+        this.updateUI();
+      }
+      return;
+    }
+
+    // Pattern: [Information (combat)] PlayerName: Posture de contre/défense/vivacité
+    const postureMatch = line.match(
+      /\[Information \(combat\)\] ([^:]+):\s+(Posture de contre|Posture de défense|Posture de vivacité)/
+    );
+    if (postureMatch) {
+      const playerName = postureMatch[1].trim();
+      const postureName = postureMatch[2].trim();
+
+      // Si le joueur n'est pas encore tracké, le définir maintenant
+      if (!this.trackedPlayerName) {
+        this.trackedPlayerName = playerName;
+      }
+
+      // Vérifier que c'est le joueur tracké
+      if (playerName === this.trackedPlayerName.trim()) {
+        if (postureName === "Posture de contre") {
+          this.activePosture = "contre";
+        } else if (postureName === "Posture de défense") {
+          this.activePosture = "défense";
+        } else if (postureName === "Posture de vivacité") {
+          this.activePosture = "vivacité";
+        }
+        this.updateUI();
+      }
     }
   }
 
@@ -233,6 +324,9 @@ class IopBoostsTracker {
     spellCast: { playerName: string; spellName: string },
     line: string
   ): void {
+    // Mémoriser le dernier joueur qui a lancé un sort
+    this.lastSpellCaster = spellCast.playerName;
+
     if (spellCast.playerName !== this.trackedPlayerName) {
       return;
     }
@@ -253,8 +347,9 @@ class IopBoostsTracker {
       }
     }
 
-    // Handle Préparation loss - disparaît dès le premier sort
-    if (this.preparation) {
+    // Handle Préparation loss - disparaît dès le lancement d'un sort infligeant des dégâts
+    if (this.preparation && this.damageSpells.has(spellCast.spellName)) {
+      console.log(`[IOP BOOSTS] Sort infligeant des dégâts détecté: ${spellCast.spellName}, désactivation de la préparation`);
       this.preparation = false;
       this.updateUI();
     }
@@ -263,6 +358,37 @@ class IopBoostsTracker {
     if (["Fulgur", "Colère de Iop"].includes(spellCast.spellName)) {
       this.egare = true;
       this.updateUI();
+    }
+
+  }
+
+  private parseDamage(line: string): void {
+    // Only process combat lines
+    if (!line.includes("[Information (combat)]")) {
+      return;
+    }
+
+    // Pattern pour les dégâts : [Information (combat)] TargetName: -XX PV (element)
+    // Note: Le nom dans le pattern est celui qui reçoit les dégâts (la cible)
+    if (line.includes("PV") && line.includes("-")) {
+      const damageMatch = line.match(
+        /\[Information \(combat\)\] ([^:]+):\s+-(\d+)\s*PV/
+      );
+      
+      if (damageMatch) {
+        const targetName = damageMatch[1].trim();
+        
+        // For posture: check if the tracked player receives damage
+        if (
+          this.trackedPlayerName &&
+          targetName === this.trackedPlayerName.trim() &&
+          this.activePosture !== null
+        ) {
+          console.log(`[IOP BOOSTS] Dégâts reçus par ${targetName}, désactivation de la posture`);
+          this.activePosture = null;
+          this.updateUI();
+        }
+      }
     }
   }
 
@@ -283,6 +409,12 @@ class IopBoostsTracker {
         if (values.preparation !== undefined)
           this.preparation = Boolean(values.preparation);
         if (values.egare !== undefined) this.egare = Boolean(values.egare);
+        if (values.activePosture !== undefined) {
+          this.activePosture =
+            values.activePosture === "" || values.activePosture === null
+              ? null
+              : values.activePosture;
+        }
         this.updateUI();
       } else if (event.data.type === "debug-update") {
         // Mettre à jour une valeur spécifique
@@ -306,6 +438,11 @@ class IopBoostsTracker {
             break;
           case "egare":
             this.egare = Boolean(value);
+            this.updateUI();
+            break;
+          case "activePosture":
+            this.activePosture =
+              value === "" || value === null ? null : value;
             this.updateUI();
             break;
         }
@@ -346,6 +483,26 @@ class IopBoostsTracker {
         egareIndicator.style.display = "flex";
       } else {
         egareIndicator.style.display = "none";
+      }
+    }
+
+    const postureIndicator = document.getElementById("posture-indicator");
+    if (postureIndicator) {
+      if (this.activePosture && this.inCombat) {
+        postureIndicator.style.display = "flex";
+        postureIndicator.className = `egare-indicator posture-${this.activePosture}`;
+        const postureText = document.getElementById("posture-text");
+        if (postureText) {
+          if (this.activePosture === "contre") {
+            postureText.textContent = "Posture de contre";
+          } else if (this.activePosture === "défense") {
+            postureText.textContent = "Posture de défense";
+          } else if (this.activePosture === "vivacité") {
+            postureText.textContent = "Posture de vivacité";
+          }
+        }
+      } else {
+        postureIndicator.style.display = "none";
       }
     }
   }

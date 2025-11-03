@@ -13,7 +13,7 @@ body {
 }
 
 .tracker-container {
-  width: 320px;
+  max-width: 320px;
   min-height: 120px;
   padding: 5px;
   background: rgba(10, 10, 10, 0.85);
@@ -142,4 +142,23 @@ body {
   width: 14px;
   height: 14px;
   object-fit: contain;
+}
+
+/* Posture indicators - colors */
+.posture-contre {
+  background: rgba(244, 67, 54, 0.3) !important;
+  border-color: rgba(244, 67, 54, 0.6) !important;
+  color: #f44336 !important;
+}
+
+.posture-défense {
+  background: rgba(76, 175, 80, 0.3) !important;
+  border-color: rgba(76, 175, 80, 0.6) !important;
+  color: #4caf50 !important;
+}
+
+.posture-vivacité {
+  background: rgba(156, 39, 176, 0.3) !important;
+  border-color: rgba(156, 39, 176, 0.6) !important;
+  color: #9c27b0 !important;
 }

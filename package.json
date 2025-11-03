@@ -8,7 +8,7 @@
     "build:watch": "tsc -p tsconfig.json --watch",
     "copy-assets": "node scripts/copy-assets.js",
     "start": "npm run build && electron dist/main/index.js",
-    "dev": "concurrently \"npm run build:watch\" \"npm run copy-assets:watch\" \"wait-on dist/main/index.js && electron dist/main/index.js\"",
+    "dev": "npm run copy-assets && concurrently \"npm run build:watch\" \"npm run copy-assets:watch\" \"wait-on dist/main/index.js dist/assets && electron dist/main/index.js\"",
     "copy-assets:watch": "node scripts/copy-assets-watch.js",
     "package": "electron-builder",
     "package:win": "electron-builder --win",

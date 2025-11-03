@@ -108,6 +108,18 @@ class DebugUI {
         default: false,
       },
       { id: "egare", label: "Égaré Actif", type: "checkbox", default: false },
+      {
+        id: "activePosture",
+        label: "Posture",
+        type: "select",
+        default: "",
+        options: [
+          { value: "", label: "Aucune" },
+          { value: "contre", label: "Posture de contre" },
+          { value: "défense", label: "Posture de défense" },
+          { value: "vivacité", label: "Posture de vivacité" },
+        ],
+      },
     ],
     "iop/combos.html": [
       {
