@@ -21,7 +21,6 @@ class OuginakTracker {
   private isOuginakTurn: boolean = false;
   private overlayVisible: boolean = false;
   private inCombat: boolean = false;
-  private lastSpellCaster: string | null = null;
 
   private timelineEntries: TimelineEntry[] = [];
   private readonly timelineMaxSlots: number = 5;
@@ -145,7 +144,6 @@ class OuginakTracker {
     this.overlayVisible = false;
     this.inCombat = false;
     this.trackedPlayerName = null;
-    this.lastSpellCaster = null;
     this.timelineEntries = [];
     this.updateUI();
     this.updateTimeline();
@@ -174,8 +172,6 @@ class OuginakTracker {
       if (parsed.isSpellCast && parsed.spellCast) {
         const casterName = parsed.spellCast.playerName;
         const spellName = parsed.spellCast.spellName;
-
-        this.lastSpellCaster = casterName;
 
         // Vérifier si c'est un sort Ouginak (recherche partielle comme en Python)
         const isOuginakSpell = this.ouginakSpells.some((spell) => {
@@ -242,23 +238,6 @@ class OuginakTracker {
     ) {
       this.ougigarouActive = false;
       this.updateUI();
-    }
-
-    // Détection de fin de tour
-    if (
-      line.includes("secondes reportées pour le tour suivant") ||
-      line.includes("reportées pour le tour suivant")
-    ) {
-      const turnOwner = this.lastSpellCaster;
-
-      if (
-        turnOwner &&
-        this.trackedPlayerName &&
-        turnOwner === this.trackedPlayerName
-      ) {
-        this.isOuginakTurn = false;
-        this.overlayVisible = false;
-      }
     }
 
     // Détection de fin de combat

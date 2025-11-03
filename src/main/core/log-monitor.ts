@@ -213,13 +213,6 @@ export class LogMonitor extends EventEmitter {
             }
           }
 
-          // Détection de la fin de tour
-          if (trimmed.includes('secondes reportées pour le tour suivant') || 
-              trimmed.includes('reportées pour le tour suivant')) {
-            // Émettre un événement pour masquer tous les trackers
-            this.emit('turnEnded');
-          }
-
           // Détection de la fin de combat
           if (LogParser.isCombatEnd(trimmed)) {
             const fightId = LogParser.parseCombatEnd(trimmed);

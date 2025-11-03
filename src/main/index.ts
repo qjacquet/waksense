@@ -34,8 +34,6 @@ const detectedClasses: Map<string, ClassDetection> = new Map();
 const playerNameToFighterId: Map<string, number> = new Map();
 const fighterIdToFighter: Map<number, CombatStartInfo["fighters"][0]> =
   new Map();
-// Dernier fighterId qui avait son tracker ouvert (pour le masquer au début du tour suivant)
-let lastActiveFighterId: number | null = null;
 
 /**
  * Ferme tous les trackers de combat
@@ -386,7 +384,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
     // Réinitialiser les mappings
     playerNameToFighterId.clear();
     fighterIdToFighter.clear();
-    lastActiveFighterId = null;
 
     // Masquer l'overlay de la liste des personnages à la fin du combat
     if (
@@ -525,32 +522,10 @@ function startLogMonitoring(logFilePath: string): void {
           }
         }
 
-        // Mémoriser le fighterId actif pour le masquer au prochain tour
-        lastActiveFighterId = data.fighterId;
-
         ensureLogMonitoring();
       }
     }
   );
-
-  // Détection de la fin de tour - masquer tous les trackers
-  logMonitor.on("turnEnded", () => {
-    // Masquer tous les trackers actuellement visibles
-    const allWindows = WindowManager.getAllWindows();
-    for (const [id, window] of allWindows) {
-      if (
-        id.startsWith("tracker-") &&
-        window &&
-        !window.isDestroyed() &&
-        window.isVisible()
-      ) {
-        window.hide();
-      }
-    }
-
-    // Réinitialiser le dernier fighterId actif
-    lastActiveFighterId = null;
-  });
 
   logMonitor.on("logLine", (line: string, parsed: any) => {
     const trackerWindows = WindowManager.getAllWindows();

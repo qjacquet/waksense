@@ -11,18 +11,42 @@ import {
 
 class IopBoostsTracker {
   private concentration: number = 0;
-  private courroux: number = 0;
+  private courroux: boolean = false;
   private puissance: number = 0;
-  private preparation: number = 0;
+  private preparation: boolean = false;
   private egare: boolean = false;
 
   private inCombat: boolean = false;
   private trackedPlayerName: string | null = null;
 
-  private pendingPreparationLoss: boolean = false;
-  private preparationLossCaster: string | null = null;
-  private preparationLossSpell: string | null = null;
   private debugMode: boolean = false;
+
+  // Mapping des coûts de sorts Iop (pour détection des sorts 4 PA)
+  private readonly spellCostMap: Map<string, string> = new Map([
+    ["Épée céleste", "2PA"],
+    ["Fulgur", "3PA"],
+    ["Super Iop Punch", "4PA"],
+    ["Jugement", "1PA"],
+    ["Colère de Iop", "6PA"],
+    ["Ébranler", "2PA"],
+    ["Roknocerok", "4PA"],
+    ["Fendoir", "3PA"],
+    ["Ravage", "5PA"],
+    ["Jabs", "3PA"],
+    ["Rafale", "1PA"],
+    ["Torgnole", "2PA"],
+    ["Tannée", "4PA"],
+    ["Épée de Iop", "3PA"],
+    ["Bond", "4PA"],
+    ["Focus", "2PA"],
+    ["Éventrail", "1PM"],
+    ["Uppercut", "1PW"],
+    ["Amplification", "2PM"],
+    ["Duel", "1PA"],
+    ["Étendard de bravoure", "3PA"],
+    ["Vertu", "2PA"],
+    ["Charge", "1PA"],
+  ]);
 
   constructor() {
     // Détecter le mode debug
@@ -78,13 +102,10 @@ class IopBoostsTracker {
 
   private resetResources(): void {
     this.concentration = 0;
-    this.courroux = 0;
+    this.courroux = false;
     this.puissance = 0;
-    this.preparation = 0;
+    this.preparation = false;
     this.egare = false;
-    this.pendingPreparationLoss = false;
-    this.preparationLossCaster = null;
-    this.preparationLossSpell = null;
     this.updateUI();
   }
 
@@ -109,9 +130,6 @@ class IopBoostsTracker {
     if (parsed.isSpellCast && parsed.spellCast) {
       this.handleSpellCast(parsed.spellCast, line);
     }
-
-    // Parse damage for Préparation consumption
-    this.parseDamage(line);
   }
 
   private parseConcentration(line: string): void {
@@ -155,48 +173,14 @@ class IopBoostsTracker {
       return;
     }
 
-    // Parse Courroux gains FIRST - "Courroux (+X Niv.) (Compulsion)" OR "Courroux (+X Niv.) (Concentration)"
-    // Note: The number in (+X Niv.) is the TOTAL current amount, not the amount gained
+    // Parse Courroux gains - "Courroux (+X Niv.) (Compulsion)" OR "Courroux (+X Niv.) (Concentration)"
+    // Courroux est toujours actif quand il est acquis, on l'active simplement
     const courrouxGainMatch = line.match(
       /Courroux \(\+(\d+) Niv\.\) \((Compulsion|Concentration)\)/
     );
     if (courrouxGainMatch) {
-      const courrouxTotal = parseInt(courrouxGainMatch[1], 10);
-      const oldCourroux = this.courroux;
-      this.courroux = Math.min(courrouxTotal, 4); // Max 4 stacks
-      if (this.courroux !== oldCourroux) {
-        this.updateUI();
-      }
-      return; // Return early to avoid checking loss patterns
-    }
-
-    // Parse Courroux loss from damage - damage dealt with (Courroux) tag
-    // Pattern: "[Information (combat)] monster: -xx PV (element) (Courroux)"
-    if (line.includes("(Courroux)") && line.includes("PV")) {
-      const courrouxDamageMatch = line.match(
-        /\[Information \(combat\)\] .*: -(\d+) PV \([^)]+\) \(Courroux\)/
-      );
-      if (courrouxDamageMatch && this.courroux > 0) {
-        this.courroux = 0; // Lose ALL stacks when damage is dealt with courroux
-        this.updateUI();
-        return;
-      }
-    }
-
-    // Parse Courroux loss - "n'est plus sous l'emprise de 'Courroux' (Compulsion)"
-    if (line.includes("n'est plus sous l'emprise de 'Courroux' (Compulsion)")) {
-      const playerMatch = line.match(/\[Information \(combat\)\] ([^:]+):/);
-      if (
-        playerMatch &&
-        this.trackedPlayerName &&
-        playerMatch[1].trim() === this.trackedPlayerName.trim()
-      ) {
-        if (this.courroux > 0) {
-          this.courroux = 0; // Lose ALL stacks
-          this.updateUI();
-        }
-        return;
-      }
+      this.courroux = true;
+      this.updateUI();
     }
   }
 
@@ -226,12 +210,9 @@ class IopBoostsTracker {
   private parsePreparation(line: string): void {
     const preparationGainMatch = line.match(/Préparation \(\+(\d+) Niv\.\)/);
     if (preparationGainMatch) {
-      const preparationTotal = parseInt(preparationGainMatch[1], 10);
-      const oldPreparation = this.preparation;
-      this.preparation = preparationTotal;
-      if (this.preparation !== oldPreparation) {
-        this.updateUI();
-      }
+      // Préparation est toujours 40, on l'active simplement
+      this.preparation = true;
+      this.updateUI();
     }
   }
 
@@ -263,43 +244,24 @@ class IopBoostsTracker {
       this.updateUI();
     }
 
-    // Handle Courroux loss spells
-    if (
-      ["Super Iop Punch", "Roknocerok", "Tannée"].includes(spellCast.spellName)
-    ) {
-      if (this.courroux > 0) {
-        this.courroux = 0;
+    // Handle Courroux loss - disparaît dès le premier sort coûtant 4 PA
+    if (this.courroux) {
+      const spellCost = this.spellCostMap.get(spellCast.spellName);
+      if (spellCost === "4PA") {
+        this.courroux = false;
         this.updateUI();
       }
     }
 
-    // Handle Préparation loss
-    if (this.preparation > 0) {
-      this.pendingPreparationLoss = true;
-      this.preparationLossCaster = spellCast.playerName;
-      this.preparationLossSpell = spellCast.spellName;
+    // Handle Préparation loss - disparaît dès le premier sort
+    if (this.preparation) {
+      this.preparation = false;
+      this.updateUI();
     }
 
     // Handle Égaré gain spells
     if (["Fulgur", "Colère de Iop"].includes(spellCast.spellName)) {
       this.egare = true;
-      this.updateUI();
-    }
-  }
-
-  private parseDamage(line: string): void {
-    if (!this.pendingPreparationLoss) {
-      return;
-    }
-
-    const damageMatch = line.match(
-      /\[Information \(combat\)\] ([^:]+):\s+-(\d+)\s*PV/
-    );
-    if (damageMatch && damageMatch[1] === this.preparationLossCaster) {
-      this.preparation = 0;
-      this.pendingPreparationLoss = false;
-      this.preparationLossCaster = null;
-      this.preparationLossSpell = null;
       this.updateUI();
     }
   }
@@ -315,11 +277,11 @@ class IopBoostsTracker {
         if (values.concentration !== undefined)
           this.concentration = Number(values.concentration);
         if (values.courroux !== undefined)
-          this.courroux = Number(values.courroux);
+          this.courroux = Boolean(values.courroux);
         if (values.puissance !== undefined)
           this.puissance = Number(values.puissance);
         if (values.preparation !== undefined)
-          this.preparation = Number(values.preparation);
+          this.preparation = Boolean(values.preparation);
         if (values.egare !== undefined) this.egare = Boolean(values.egare);
         this.updateUI();
       } else if (event.data.type === "debug-update") {
@@ -331,7 +293,7 @@ class IopBoostsTracker {
             this.updateUI();
             break;
           case "courroux":
-            this.courroux = Number(value);
+            this.courroux = Boolean(value);
             this.updateUI();
             break;
           case "puissance":
@@ -339,7 +301,7 @@ class IopBoostsTracker {
             this.updateUI();
             break;
           case "preparation":
-            this.preparation = Number(value);
+            this.preparation = Boolean(value);
             this.updateUI();
             break;
           case "egare":
@@ -358,13 +320,24 @@ class IopBoostsTracker {
       this.concentration,
       100
     );
-    updateStackIndicator("courroux-stacks", this.courroux, 4, "Courroux");
     updateStackIndicator("puissance-stacks", this.puissance, 50, "Puissance");
 
-    const prepElement = document.getElementById("preparation-stacks");
-    if (prepElement) {
-      prepElement.textContent =
-        this.preparation > 0 ? `Préparation: ${this.preparation}` : "";
+    const courrouxIndicator = document.getElementById("courroux-indicator");
+    if (courrouxIndicator) {
+      if (this.courroux && this.inCombat) {
+        courrouxIndicator.style.display = "flex";
+      } else {
+        courrouxIndicator.style.display = "none";
+      }
+    }
+
+    const preparationIndicator = document.getElementById("preparation-indicator");
+    if (preparationIndicator) {
+      if (this.preparation && this.inCombat) {
+        preparationIndicator.style.display = "flex";
+      } else {
+        preparationIndicator.style.display = "none";
+      }
     }
 
     const egareIndicator = document.getElementById("egare-indicator");
