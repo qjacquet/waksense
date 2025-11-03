@@ -2,7 +2,12 @@
  * Cra Tracker - Suivi des ressources Cra en temps réel
  */
 
-import { setupTrackerEventListeners, updateProgressBar, updateStackIndicator, updateBooleanIndicator } from '../../core/ui-helpers.js';
+import {
+  setupTrackerEventListeners,
+  updateBooleanIndicator,
+  updateProgressBar,
+  updateStackIndicator,
+} from "../../core/ui-helpers.js";
 
 class CraTracker {
   private affutage: number = 0;
@@ -14,9 +19,17 @@ class CraTracker {
   private precisionMax: number = 300;
   private recentPrecisionGains: number[] = [];
   private maxRecentGains: number = 5;
+  private debugMode: boolean = false;
 
   constructor() {
+    // Détecter le mode debug
+    const urlParams = new URLSearchParams(window.location.search);
+    this.debugMode = urlParams.get("debug") === "true";
+
     this.setupEventListeners();
+    if (this.debugMode) {
+      this.setupDebugMode();
+    }
     this.updateUI();
   }
 
@@ -24,7 +37,7 @@ class CraTracker {
     if (!window.electronAPI) {
       return;
     }
-    
+
     setupTrackerEventListeners(
       (line: string, parsed: any) => this.processLogLine(line, parsed),
       () => this.resetResources()
@@ -43,27 +56,27 @@ class CraTracker {
   private processLogLine(line: string, parsed: any): void {
     // Parse Affûtage (peut être dans ou hors combat)
     this.parseAffutage(line);
-    
+
     // Parse Précision (peut être dans ou hors combat)
     this.parsePrecision(line);
-    
+
     // Les autres parsers nécessitent des lignes de combat
     if (!line.includes("[Information (combat)]")) {
       return;
     }
-    
+
     // Parse Pointe affûtée consumption
     this.parsePointeAffutee(line);
-    
+
     // Parse Balise affûtée consumption
     this.parseBaliseAffutee(line);
-    
+
     // Parse Tir précis buff
     this.parseTirPrecis(line);
-    
+
     // Parse Précision buff removal
     this.parsePrecisionBuffRemoval(line);
-    
+
     // Parse spell consumption with Tir précis active
     this.parseSpellConsumption(line, parsed);
   }
@@ -73,29 +86,35 @@ class CraTracker {
     const match = line.match(/Affûtage\s*\(\+(\d+)\s*Niv\.\)/i);
     if (match) {
       const newAffutage = parseInt(match[1], 10);
-      
+
       // Handle Affûtage reaching 100+ - gain stacks and carry over excess
       if (newAffutage >= 100) {
         const stacksGained = Math.floor(newAffutage / 100);
-        
+
         // Gain Pointe affûtée stacks (max 3)
         if (this.pointeAffuteeStacks < 3) {
-          const stacksToAdd = Math.min(stacksGained, 3 - this.pointeAffuteeStacks);
+          const stacksToAdd = Math.min(
+            stacksGained,
+            3 - this.pointeAffuteeStacks
+          );
           this.pointeAffuteeStacks += stacksToAdd;
         }
-        
+
         // Gain Balise affûtée stacks (max 3)
         if (this.baliseAffuteeStacks < 3) {
-          const stacksToAdd = Math.min(stacksGained, 3 - this.baliseAffuteeStacks);
+          const stacksToAdd = Math.min(
+            stacksGained,
+            3 - this.baliseAffuteeStacks
+          );
           this.baliseAffuteeStacks += stacksToAdd;
         }
-        
+
         // Keep remainder (ex: 150 → 1 stack, 50 remaining)
         this.affutage = newAffutage % 100;
       } else {
         this.affutage = newAffutage;
       }
-      
+
       this.updateUI();
     }
   }
@@ -106,9 +125,12 @@ class CraTracker {
     if (precisionMatch) {
       const newPrecision = parseInt(precisionMatch[1], 10);
       this.precision = newPrecision;
-      
+
       // Check for "Esprit affûté" talent (limits precision to 200)
-      if (line.includes("Valeur maximale de Précision atteinte !") && this.precision > 200) {
+      if (
+        line.includes("Valeur maximale de Précision atteinte !") &&
+        this.precision > 200
+      ) {
         // Check if this was after a +300 gain (normal case - don't cap)
         if (!this.wasRecent300Gain()) {
           this.precision = 200;
@@ -121,19 +143,22 @@ class CraTracker {
           this.precision = this.precisionMax;
         }
       }
-      
+
       this.updateUI();
     }
-    
+
     // Track precision gains for talent detection
     const gainMatch = line.match(/Précision.*?(\+?\d+)/i);
-    if (gainMatch && line.includes('+')) {
+    if (gainMatch && line.includes("+")) {
       try {
         const precisionGain = parseInt(gainMatch[1], 10);
         this.storePrecisionGain(precisionGain);
-        
+
         // If gained > 200 without cap message, talent might be removed
-        if (precisionGain > 200 && !line.includes("Valeur maximale de Précision atteinte !")) {
+        if (
+          precisionGain > 200 &&
+          !line.includes("Valeur maximale de Précision atteinte !")
+        ) {
           if (this.hasEspritAffute) {
             this.hasEspritAffute = false;
             this.precisionMax = 300;
@@ -157,9 +182,11 @@ class CraTracker {
   private parseBaliseAffutee(line: string): void {
     // Balise affûtée is consumed when specific spells are cast
     if (line.includes("lance le sort")) {
-      if (line.includes("Balise de destruction") || 
-          line.includes("Balise d'alignement") || 
-          line.includes("Balise de contact")) {
+      if (
+        line.includes("Balise de destruction") ||
+        line.includes("Balise d'alignement") ||
+        line.includes("Balise de contact")
+      ) {
         if (this.baliseAffuteeStacks > 0) {
           this.baliseAffuteeStacks--;
           this.updateUI();
@@ -197,7 +224,7 @@ class CraTracker {
     if (this.tirPrecisActive && parsed.isSpellCast && parsed.spellCast) {
       const spellName = parsed.spellCast.spellName;
       let spellConsumption = 0;
-      
+
       // Spell consumption values
       const consumptionMap: { [key: string]: number } = {
         "Flèche criblante": 60,
@@ -216,16 +243,16 @@ class CraTracker {
         "Flèche de recul": 60,
         "Flèche tempête": 45,
         "Flèche harcelante": 45,
-        "Flèche statique": 90
+        "Flèche statique": 90,
       };
-      
+
       for (const [spell, cost] of Object.entries(consumptionMap)) {
         if (spellName.includes(spell)) {
           spellConsumption = cost;
           break;
         }
       }
-      
+
       if (spellConsumption > 0) {
         this.precision = Math.max(this.precision - spellConsumption, 0);
         this.updateUI();
@@ -245,24 +272,91 @@ class CraTracker {
     if (this.recentPrecisionGains.length === 0) {
       return false;
     }
-    return this.recentPrecisionGains[this.recentPrecisionGains.length - 1] === 300;
+    return (
+      this.recentPrecisionGains[this.recentPrecisionGains.length - 1] === 300
+    );
+  }
+
+  private setupDebugMode(): void {
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "debug-init") {
+        // Initialiser avec toutes les valeurs
+        const values = event.data.values;
+        if (values.affutage !== undefined)
+          this.affutage = Number(values.affutage);
+        if (values.precision !== undefined)
+          this.precision = Number(values.precision);
+        if (values.precisionMax !== undefined)
+          this.precisionMax = Number(values.precisionMax);
+        if (values.pointeAffuteeStacks !== undefined)
+          this.pointeAffuteeStacks = Number(values.pointeAffuteeStacks);
+        if (values.baliseAffuteeStacks !== undefined)
+          this.baliseAffuteeStacks = Number(values.baliseAffuteeStacks);
+        if (values.tirPrecisActive !== undefined)
+          this.tirPrecisActive = Boolean(values.tirPrecisActive);
+        this.updateUI();
+      } else if (event.data.type === "debug-update") {
+        // Mettre à jour une valeur spécifique
+        const { key, value } = event.data;
+        switch (key) {
+          case "affutage":
+            this.affutage = Number(value);
+            break;
+          case "precision":
+            this.precision = Number(value);
+            break;
+          case "precisionMax":
+            this.precisionMax = Number(value);
+            break;
+          case "pointeAffuteeStacks":
+            this.pointeAffuteeStacks = Number(value);
+            break;
+          case "baliseAffuteeStacks":
+            this.baliseAffuteeStacks = Number(value);
+            break;
+          case "tirPrecisActive":
+            this.tirPrecisActive = Boolean(value);
+            break;
+        }
+        this.updateUI();
+      }
+    });
   }
 
   private updateUI(): void {
-    updateProgressBar('affutage-fill', 'affutage-value', this.affutage, 100);
-    updateProgressBar('precision-fill', 'precision-value', this.precision, this.precisionMax);
-    
-    const precisionMax = document.getElementById('precision-max');
+    updateProgressBar("affutage-fill", "affutage-value", this.affutage, 100);
+    updateProgressBar(
+      "precision-fill",
+      "precision-value",
+      this.precision,
+      this.precisionMax
+    );
+
+    const precisionMax = document.getElementById("precision-max");
     if (precisionMax) {
       precisionMax.textContent = `/ ${this.precisionMax}`;
     }
-    
-    updateStackIndicator('pointe-stacks', this.pointeAffuteeStacks, 3, 'Pointe');
-    updateStackIndicator('balise-stacks', this.baliseAffuteeStacks, 3, 'Balise');
-    updateBooleanIndicator('tir-precis-indicator', this.tirPrecisActive, 'Tir précis actif');
+
+    updateStackIndicator(
+      "pointe-stacks",
+      this.pointeAffuteeStacks,
+      3,
+      "Pointe"
+    );
+    updateStackIndicator(
+      "balise-stacks",
+      this.baliseAffuteeStacks,
+      3,
+      "Balise"
+    );
+    updateBooleanIndicator(
+      "tir-precis-indicator",
+      this.tirPrecisActive,
+      "Tir précis actif"
+    );
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   new CraTracker();
 });

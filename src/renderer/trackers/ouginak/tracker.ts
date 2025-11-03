@@ -3,7 +3,10 @@
  * Basé sur wakfu_ouginak_resource_tracker.py
  */
 
-import { setupTrackerEventListeners, updateProgressBar } from '../../core/ui-helpers.js';
+import {
+  setupTrackerEventListeners,
+  updateProgressBar,
+} from "../../core/ui-helpers.js";
 
 interface TimelineEntry {
   spell: string;
@@ -19,23 +22,49 @@ class OuginakTracker {
   private overlayVisible: boolean = false;
   private inCombat: boolean = false;
   private lastSpellCaster: string | null = null;
-  
+
   private timelineEntries: TimelineEntry[] = [];
   private readonly timelineMaxSlots: number = 5;
+  private debugMode: boolean = false;
 
   // Liste des sorts Ouginak
   private readonly ouginakSpells: string[] = [
-    "Emeute", "Émeute", "Fleau", "Fléau", "Rupture", "Plombage",
-    "Balafre", "Croc-en-jambe", "Bastonnade", "Molosse", "Hachure",
-    "Saccade", "Balayage", "Contusion", "Cador", "Brise'Os", "Brise'O",
-    "Baroud", "Chasseur", "Elan", "Élan", "Canine", "Apaisement",
-    "Poursuite", "Meute", "Proie", "Ougigarou", "Chienchien"
+    "Emeute",
+    "Émeute",
+    "Fleau",
+    "Fléau",
+    "Rupture",
+    "Plombage",
+    "Balafre",
+    "Croc-en-jambe",
+    "Bastonnade",
+    "Molosse",
+    "Hachure",
+    "Saccade",
+    "Balayage",
+    "Contusion",
+    "Cador",
+    "Brise'Os",
+    "Brise'O",
+    "Baroud",
+    "Chasseur",
+    "Elan",
+    "Élan",
+    "Canine",
+    "Apaisement",
+    "Poursuite",
+    "Meute",
+    "Proie",
+    "Ougigarou",
+    "Chienchien",
   ];
 
   // Mapping des coûts de sorts (pour affichage)
   private readonly spellCostMap: Map<string, string> = new Map([
-    ["Emeute", "3PA"], ["Émeute", "3PA"],
-    ["Fléau", "4PA"], ["Fleau", "4PA"],
+    ["Emeute", "3PA"],
+    ["Émeute", "3PA"],
+    ["Fléau", "4PA"],
+    ["Fleau", "4PA"],
     ["Rupture", "2PA"],
     ["Plombage", "3PA"],
     ["Balafre", "5PA"],
@@ -47,23 +76,27 @@ class OuginakTracker {
     ["Balayage", "4PA"],
     ["Contusion", "3PA"],
     ["Cador", "3PA"],
-    ["Brise'Os", "2PA"], ["Brise'O", "2PA"],
+    ["Brise'Os", "2PA"],
+    ["Brise'O", "2PA"],
     ["Baroud", "6PA"],
     ["Chasseur", "2PA"],
-    ["Elan", "1PA"], ["Élan", "1PA"],
+    ["Elan", "1PA"],
+    ["Élan", "1PA"],
     ["Canine", "3PA"],
     ["Apaisement", "2PA"],
     ["Poursuite", "3PA"],
     ["Meute", "1PW"],
     ["Proie", "1PW"],
     ["Chienchien", "3PA"],
-    ["Ougigarou", "2PA2PW"]
+    ["Ougigarou", "2PA2PW"],
   ]);
 
   // Mapping des coûts de rage en mode Ougigarou (PA + PM + PW)
   private readonly spellRageCostMap: Map<string, number> = new Map([
-    ["Emeute", 3], ["Émeute", 3],
-    ["Fléau", 5], ["Fleau", 5], // 4 PA + 1 PW
+    ["Emeute", 3],
+    ["Émeute", 3],
+    ["Fléau", 5],
+    ["Fleau", 5], // 4 PA + 1 PW
     ["Rupture", 2],
     ["Plombage", 3],
     ["Balafre", 5],
@@ -75,8 +108,9 @@ class OuginakTracker {
     ["Balayage", 4],
     ["Contusion", 3],
     ["Cador", 4], // 3 PA + 1 PW
-    ["Brise'Os", 2], ["Brise'O", 2],
-    ["Baroud", 7] // 6 PA + 1 PW
+    ["Brise'Os", 2],
+    ["Brise'O", 2],
+    ["Baroud", 7], // 6 PA + 1 PW
     // Note: Chasseur, Elan, Élan, Canine, Apaisement, Poursuite, Meute, Proie, Chienchien ne consomment PAS de rage
   ]);
 
@@ -84,8 +118,15 @@ class OuginakTracker {
     if (!window.electronAPI) {
       return;
     }
-    
+
+    // Détecter le mode debug
+    const urlParams = new URLSearchParams(window.location.search);
+    this.debugMode = urlParams.get("debug") === "true";
+
     this.setupEventListeners();
+    if (this.debugMode) {
+      this.setupDebugMode();
+    }
     this.updateUI();
     this.updateTimeline();
   }
@@ -137,10 +178,19 @@ class OuginakTracker {
         this.lastSpellCaster = casterName;
 
         // Vérifier si c'est un sort Ouginak (recherche partielle comme en Python)
-        const isOuginakSpell = this.ouginakSpells.some(spell => {
-          const normalizedSpell = spell.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          const normalizedSpellName = spellName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          return normalizedSpellName.includes(normalizedSpell) || normalizedSpell.includes(normalizedSpellName);
+        const isOuginakSpell = this.ouginakSpells.some((spell) => {
+          const normalizedSpell = spell
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+          const normalizedSpellName = spellName
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+          return (
+            normalizedSpellName.includes(normalizedSpell) ||
+            normalizedSpell.includes(normalizedSpellName)
+          );
         });
 
         if (isOuginakSpell) {
@@ -177,7 +227,9 @@ class OuginakTracker {
 
     // Détection de l'activation Ougigarou
     if (line.includes("Ougigarou (Niv.")) {
-      const ougiMatch = line.match(/\[Information \(combat\)\] ([^:]+): Ougigarou/);
+      const ougiMatch = line.match(
+        /\[Information \(combat\)\] ([^:]+): Ougigarou/
+      );
       if (ougiMatch && ougiMatch[1].trim() === this.trackedPlayerName) {
         this.ougigarouActive = true;
         this.updateUI();
@@ -185,24 +237,36 @@ class OuginakTracker {
     }
 
     // Détection de la désactivation Ougigarou
-    if (line.includes("n'est plus sous l'emprise de 'Ougigarou' (Rage consommée)")) {
+    if (
+      line.includes("n'est plus sous l'emprise de 'Ougigarou' (Rage consommée)")
+    ) {
       this.ougigarouActive = false;
       this.updateUI();
     }
 
     // Détection de fin de tour
-    if (line.includes("secondes reportées pour le tour suivant") || 
-        line.includes("reportées pour le tour suivant")) {
+    if (
+      line.includes("secondes reportées pour le tour suivant") ||
+      line.includes("reportées pour le tour suivant")
+    ) {
       const turnOwner = this.lastSpellCaster;
 
-      if (turnOwner && this.trackedPlayerName && turnOwner === this.trackedPlayerName) {
+      if (
+        turnOwner &&
+        this.trackedPlayerName &&
+        turnOwner === this.trackedPlayerName
+      ) {
         this.isOuginakTurn = false;
         this.overlayVisible = false;
       }
     }
 
     // Détection de fin de combat
-    if (line.includes("Combat terminé, cliquez ici pour rouvrir l'écran de fin de combat.")) {
+    if (
+      line.includes(
+        "Combat terminé, cliquez ici pour rouvrir l'écran de fin de combat."
+      )
+    ) {
       this.inCombat = false;
       this.isOuginakTurn = false;
       this.overlayVisible = false;
@@ -229,7 +293,7 @@ class OuginakTracker {
 
     const entry: TimelineEntry = {
       spell: spellName,
-      cost: displayCost
+      cost: displayCost,
     };
 
     // Ajouter et limiter à N dernières entrées
@@ -242,12 +306,12 @@ class OuginakTracker {
   }
 
   private updateTimeline(): void {
-    const timelineContainer = document.getElementById('timeline-container');
+    const timelineContainer = document.getElementById("timeline-container");
     if (!timelineContainer) {
       return;
     }
 
-    timelineContainer.innerHTML = '';
+    timelineContainer.innerHTML = "";
 
     // Afficher les entrées de la plus récente à la plus ancienne (de gauche à droite)
     for (let i = this.timelineEntries.length - 1; i >= 0; i--) {
@@ -255,31 +319,31 @@ class OuginakTracker {
       const index = this.timelineEntries.length - 1 - i;
 
       if (index < this.timelineMaxSlots) {
-        const timelineItem = document.createElement('div');
-        timelineItem.className = 'timeline-item';
+        const timelineItem = document.createElement("div");
+        timelineItem.className = "timeline-item";
 
         // Icône du sort (pour l'instant texte, peut être amélioré avec des images)
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'timeline-icon';
-        iconDiv.textContent = '🐺'; // Placeholder, peut être remplacé par une image
+        const iconDiv = document.createElement("div");
+        iconDiv.className = "timeline-icon";
+        iconDiv.textContent = "🐺"; // Placeholder, peut être remplacé par une image
         timelineItem.appendChild(iconDiv);
 
         // Coût du sort
-        const costDiv = document.createElement('div');
-        costDiv.className = 'timeline-cost';
+        const costDiv = document.createElement("div");
+        costDiv.className = "timeline-cost";
         costDiv.textContent = entry.cost;
-        
+
         // Ajouter une classe pour la couleur selon le type de ressource
-        if (entry.cost.includes('RG')) {
-          costDiv.classList.add('cost-rage');
-        } else if (entry.cost.includes('PA')) {
-          costDiv.classList.add('cost-pa');
-        } else if (entry.cost.includes('PM')) {
-          costDiv.classList.add('cost-pm');
-        } else if (entry.cost.includes('PW')) {
-          costDiv.classList.add('cost-pw');
+        if (entry.cost.includes("RG")) {
+          costDiv.classList.add("cost-rage");
+        } else if (entry.cost.includes("PA")) {
+          costDiv.classList.add("cost-pa");
+        } else if (entry.cost.includes("PM")) {
+          costDiv.classList.add("cost-pm");
+        } else if (entry.cost.includes("PW")) {
+          costDiv.classList.add("cost-pw");
         }
-        
+
         timelineItem.appendChild(costDiv);
 
         timelineContainer.appendChild(timelineItem);
@@ -287,35 +351,76 @@ class OuginakTracker {
     }
   }
 
+  private setupDebugMode(): void {
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "debug-init") {
+        // Initialiser avec toutes les valeurs
+        const values = event.data.values;
+        if (values.rage !== undefined) this.rage = Number(values.rage);
+        if (values.ougigarouActive !== undefined)
+          this.ougigarouActive = Boolean(values.ougigarouActive);
+        if (values.inCombat !== undefined)
+          this.inCombat = Boolean(values.inCombat);
+        if (values.overlayVisible !== undefined)
+          this.overlayVisible = Boolean(values.overlayVisible);
+        this.updateUI();
+      } else if (event.data.type === "debug-update") {
+        // Mettre à jour une valeur spécifique
+        const { key, value } = event.data;
+        switch (key) {
+          case "rage":
+            this.rage = Number(value);
+            break;
+          case "ougigarouActive":
+            this.ougigarouActive = Boolean(value);
+            break;
+          case "inCombat":
+            this.inCombat = Boolean(value);
+            break;
+          case "overlayVisible":
+            this.overlayVisible = Boolean(value);
+            break;
+        }
+        this.updateUI();
+      }
+    });
+  }
+
   private updateUI(): void {
     // Mettre à jour la barre de rage (0-30)
-    updateProgressBar('rage-fill', 'rage-value', this.rage, 30, (current, max) => `${current}/${max}`);
+    updateProgressBar(
+      "rage-fill",
+      "rage-value",
+      this.rage,
+      30,
+      (current, max) => `${current}/${max}`
+    );
 
     // Mettre à jour le style en mode Ougigarou
-    const rageFill = document.getElementById('rage-fill');
-    const trackerContainer = document.getElementById('tracker-container');
-    
+    const rageFill = document.getElementById("rage-fill");
+    const trackerContainer = document.getElementById("tracker-container");
+
     if (rageFill && trackerContainer) {
       if (this.ougigarouActive) {
-        rageFill.classList.add('ougarou-active');
-        trackerContainer.classList.add('ougarou-mode');
+        rageFill.classList.add("ougarou-active");
+        trackerContainer.classList.add("ougarou-mode");
       } else {
-        rageFill.classList.remove('ougarou-active');
-        trackerContainer.classList.remove('ougarou-mode');
+        rageFill.classList.remove("ougarou-active");
+        trackerContainer.classList.remove("ougarou-mode");
       }
     }
 
     // Afficher/masquer l'overlay selon la visibilité
     if (trackerContainer) {
       if (this.overlayVisible && this.inCombat) {
-        trackerContainer.style.display = 'block';
+        trackerContainer.style.display = "block";
       } else {
-        trackerContainer.style.display = 'none';
+        trackerContainer.style.display = "none";
       }
     }
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   new OuginakTracker();
 });
