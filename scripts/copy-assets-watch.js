@@ -1,13 +1,16 @@
 /**
  * Script pour surveiller et copier les assets HTML/CSS en temps réel
+ * et les assets globaux vers dist/assets
  */
 
-const chokidar = require('chokidar');
-const fs = require('fs');
-const path = require('path');
+const chokidar = require("chokidar");
+const fs = require("fs");
+const path = require("path");
 
-const sourceDir = path.join(__dirname, '..', 'src', 'renderer');
-const destDir = path.join(__dirname, '..', 'dist', 'renderer');
+const rendererSourceDir = path.join(__dirname, "..", "src", "renderer");
+const rendererDestDir = path.join(__dirname, "..", "dist", "renderer");
+const assetsSourceDir = path.join(__dirname, "..", "assets");
+const assetsDestDir = path.join(__dirname, "..", "dist", "assets");
 
 function copyFile(src, dest) {
   const destDir = path.dirname(dest);
@@ -18,51 +21,73 @@ function copyFile(src, dest) {
   console.log(`Copied: ${src} -> ${dest}`);
 }
 
-// Copier initialement
-if (fs.existsSync(sourceDir)) {
-  function copyRecursive(src, dest) {
-    const exists = fs.existsSync(src);
-    const stats = exists && fs.statSync(src);
-    const isDirectory = exists && stats.isDirectory();
+function copyRecursive(src, dest) {
+  const exists = fs.existsSync(src);
+  const stats = exists && fs.statSync(src);
+  const isDirectory = exists && stats.isDirectory();
 
-    if (isDirectory) {
-      if (!fs.existsSync(dest)) {
-        fs.mkdirSync(dest, { recursive: true });
-      }
-      fs.readdirSync(src).forEach(childItemName => {
-        copyRecursive(
-          path.join(src, childItemName),
-          path.join(dest, childItemName)
-        );
-      });
-    } else {
-      if (!src.endsWith('.ts')) {
-        copyFile(src, dest);
-      }
+  if (isDirectory) {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+    fs.readdirSync(src).forEach((childItemName) => {
+      copyRecursive(
+        path.join(src, childItemName),
+        path.join(dest, childItemName)
+      );
+    });
+  } else {
+    if (!src.endsWith(".ts")) {
+      copyFile(src, dest);
     }
   }
-  copyRecursive(sourceDir, destDir);
 }
 
-// Surveiller les changements
-const watcher = chokidar.watch(sourceDir, {
+// Copier initialement les fichiers renderer
+if (fs.existsSync(rendererSourceDir)) {
+  copyRecursive(rendererSourceDir, rendererDestDir);
+}
+
+// Copier initialement les assets globaux
+if (fs.existsSync(assetsSourceDir)) {
+  copyRecursive(assetsSourceDir, assetsDestDir);
+}
+
+// Surveiller les changements du renderer
+const rendererWatcher = chokidar.watch(rendererSourceDir, {
   ignored: /\.ts$/,
-  persistent: true
+  persistent: true,
 });
 
-watcher.on('change', filePath => {
-  const relativePath = path.relative(sourceDir, filePath);
-  const destPath = path.join(destDir, relativePath);
+rendererWatcher.on("change", (filePath) => {
+  const relativePath = path.relative(rendererSourceDir, filePath);
+  const destPath = path.join(rendererDestDir, relativePath);
   copyFile(filePath, destPath);
 });
 
-watcher.on('add', filePath => {
-  if (!filePath.endsWith('.ts')) {
-    const relativePath = path.relative(sourceDir, filePath);
-    const destPath = path.join(destDir, relativePath);
+rendererWatcher.on("add", (filePath) => {
+  if (!filePath.endsWith(".ts")) {
+    const relativePath = path.relative(rendererSourceDir, filePath);
+    const destPath = path.join(rendererDestDir, relativePath);
     copyFile(filePath, destPath);
   }
 });
 
-console.log('Watching for asset changes...');
+// Surveiller les changements des assets globaux
+const assetsWatcher = chokidar.watch(assetsSourceDir, {
+  persistent: true,
+});
 
+assetsWatcher.on("change", (filePath) => {
+  const relativePath = path.relative(assetsSourceDir, filePath);
+  const destPath = path.join(assetsDestDir, relativePath);
+  copyFile(filePath, destPath);
+});
+
+assetsWatcher.on("add", (filePath) => {
+  const relativePath = path.relative(assetsSourceDir, filePath);
+  const destPath = path.join(assetsDestDir, relativePath);
+  copyFile(filePath, destPath);
+});
+
+console.log("Watching for asset changes (renderer and global assets)...");

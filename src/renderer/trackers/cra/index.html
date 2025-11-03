@@ -11,6 +11,7 @@
       <div class="resource-bars">
         <!-- Affûtage bar -->
         <div class="resource-bar affutage-bar">
+          <img id="affutage-icon" class="bar-icon" src="" alt="Affûtage" />
           <div class="bar-label">Affûtage</div>
           <div class="bar-fill" id="affutage-fill" style="width: 0%"></div>
           <div class="bar-value" id="affutage-value">0</div>
@@ -18,12 +19,19 @@
 
         <!-- Stacks indicator (Pointe and Balise) -->
         <div class="stacks-container">
-          <span id="pointe-stacks" class="stack-indicator"></span>
-          <span id="balise-stacks" class="stack-indicator"></span>
+          <div class="stack-item">
+            <img id="pointe-icon" class="stack-icon" src="" alt="Pointe" />
+            <span id="pointe-stacks" class="stack-indicator"></span>
+          </div>
+          <div class="stack-item">
+            <img id="balise-icon" class="stack-icon" src="" alt="Balise" />
+            <span id="balise-stacks" class="stack-indicator"></span>
+          </div>
         </div>
 
         <!-- Précision bar -->
         <div class="resource-bar precision-bar">
+          <img id="precision-icon" class="bar-icon" src="" alt="Précision" />
           <div class="bar-label">Précision</div>
           <div class="bar-fill" id="precision-fill" style="width: 0%"></div>
           <div class="bar-value" id="precision-value">0</div>
@@ -32,7 +40,13 @@
 
         <!-- Tir précis indicator -->
         <div id="tir-precis-indicator" class="tir-precis-indicator">
-          Tir précis actif
+          <img
+            id="tir-precis-icon"
+            class="tir-precis-icon"
+            src=""
+            alt="Tir précis"
+          />
+          <span id="tir-precis-text">Tir précis actif</span>
         </div>
       </div>
     </div>

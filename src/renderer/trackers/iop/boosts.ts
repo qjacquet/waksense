@@ -5,7 +5,6 @@
 
 import {
   setupTrackerEventListeners,
-  updateBooleanIndicator,
   updateProgressBar,
   updateStackIndicator,
 } from "../../core/ui-helpers.js";
@@ -30,11 +29,38 @@ class IopBoostsTracker {
     const urlParams = new URLSearchParams(window.location.search);
     this.debugMode = urlParams.get("debug") === "true";
 
+    this.loadIcons();
     this.setupEventListeners();
     if (this.debugMode) {
       this.setupDebugMode();
     }
     this.updateUI();
+  }
+
+  private loadIcons(): void {
+    // Utiliser les assets globaux depuis dist/assets/
+    // Chemin relatif depuis dist/renderer/trackers/iop/ vers dist/assets/classes/iop/
+    const concentrationIcon = document.getElementById("concentration-icon");
+    const courrouxIcon = document.getElementById("courroux-icon");
+    const preparationIcon = document.getElementById("preparation-icon");
+    const egareIcon = document.getElementById("egare-icon");
+
+    if (concentrationIcon) {
+      (concentrationIcon as HTMLImageElement).src =
+        "../../../assets/classes/iop/concentration.png";
+    }
+    if (courrouxIcon) {
+      (courrouxIcon as HTMLImageElement).src =
+        "../../../assets/classes/iop/Couroux.png";
+    }
+    if (preparationIcon) {
+      (preparationIcon as HTMLImageElement).src =
+        "../../../assets/classes/iop/preparation.png";
+    }
+    if (egareIcon) {
+      (egareIcon as HTMLImageElement).src =
+        "../../../assets/classes/iop/égaré.png";
+    }
   }
 
   private setupEventListeners(): void {
@@ -341,11 +367,14 @@ class IopBoostsTracker {
         this.preparation > 0 ? `Préparation: ${this.preparation}` : "";
     }
 
-    updateBooleanIndicator(
-      "egare-indicator",
-      this.egare && this.inCombat,
-      "Égaré actif"
-    );
+    const egareIndicator = document.getElementById("egare-indicator");
+    if (egareIndicator) {
+      if (this.egare && this.inCombat) {
+        egareIndicator.style.display = "flex";
+      } else {
+        egareIndicator.style.display = "none";
+      }
+    }
   }
 }
 

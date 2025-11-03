@@ -11,6 +11,12 @@
       <div class="resource-bars">
         <!-- Concentration bar -->
         <div class="resource-bar concentration-bar">
+          <img
+            id="concentration-icon"
+            class="bar-icon"
+            src=""
+            alt="Concentration"
+          />
           <div class="bar-label">Concentration</div>
           <div class="bar-fill" id="concentration-fill" style="width: 0%"></div>
           <div class="bar-value" id="concentration-value">0</div>
@@ -18,13 +24,27 @@
 
         <!-- Stacks indicator (Courroux, Puissance, Préparation) -->
         <div class="stacks-container">
-          <span id="courroux-stacks" class="stack-indicator"></span>
+          <div class="stack-item">
+            <img id="courroux-icon" class="stack-icon" src="" alt="Courroux" />
+            <span id="courroux-stacks" class="stack-indicator"></span>
+          </div>
           <span id="puissance-stacks" class="stack-indicator"></span>
-          <span id="preparation-stacks" class="stack-indicator"></span>
+          <div class="stack-item">
+            <img
+              id="preparation-icon"
+              class="stack-icon"
+              src=""
+              alt="Préparation"
+            />
+            <span id="preparation-stacks" class="stack-indicator"></span>
+          </div>
         </div>
 
         <!-- Égaré indicator -->
-        <div id="egare-indicator" class="egare-indicator">Égaré actif</div>
+        <div id="egare-indicator" class="egare-indicator">
+          <img id="egare-icon" class="egare-icon" src="" alt="Égaré" />
+          <span id="egare-text">Égaré actif</span>
+        </div>
       </div>
     </div>
     <script type="module" src="boosts.js"></script>

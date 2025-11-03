@@ -107,7 +107,9 @@ class IopCombosTracker {
     const icon = document.createElement("div");
     icon.className = "combo-icon";
     const img = document.createElement("img");
-    img.src = `img/${combo.icon}`;
+    // Utiliser les assets globaux depuis dist/assets/
+    // Chemin relatif depuis dist/renderer/trackers/iop/ vers dist/assets/classes/iop/
+    img.src = `../../../assets/classes/iop/${combo.icon}`;
     img.alt = combo.name;
     img.onerror = () => {
       // Fallback to text if image not found

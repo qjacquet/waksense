@@ -42,9 +42,20 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.bar-icon {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  z-index: 3;
+  object-fit: contain;
+}
+
 .bar-label {
   position: absolute;
-  left: 5px;
+  left: 20px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 10px;
@@ -107,6 +118,18 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.stack-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stack-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
 .stack-indicator {
   background: rgba(255, 215, 0, 0.2);
   padding: 2px 6px;
@@ -123,8 +146,21 @@ body {
   color: #4a9eff;
   font-size: 10px;
   font-weight: bold;
-  text-align: center;
   margin-top: 3px;
   /* Désactiver le drag pour permettre les interactions */
   -webkit-app-region: no-drag;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tir-precis-indicator[style*="display: block"] {
+  display: flex !important;
+}
+
+.tir-precis-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }

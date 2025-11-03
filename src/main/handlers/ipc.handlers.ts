@@ -2,8 +2,7 @@
  * IPC Handlers - Gestionnaires IPC pour la communication main/renderer
  */
 
-import { BrowserWindow, app, dialog, ipcMain } from "electron";
-import * as path from "path";
+import { BrowserWindow, dialog, ipcMain } from "electron";
 import { Config } from "../core/config";
 import { ClassDetection, LogMonitor } from "../core/log-monitor";
 import { WindowManager } from "../windows/window-manager";
@@ -235,19 +234,9 @@ export function setupIpcHandlers(
 
   // Assets
   ipcMain.handle("get-asset-path", (_event, ...pathSegments: string[]) => {
-    const appPath = app.getAppPath();
-    const assetsPath = path.join(appPath, "assets", ...pathSegments);
-    // Retourner une URL file:// formatée correctement
-    const normalizedPath = assetsPath.replace(/\\/g, "/");
-    if (normalizedPath.match(/^[A-Z]:/)) {
-      // Chemin Windows -> file:///C:/path/to/file
-      return `file:///${normalizedPath}`;
-    } else {
-      // Chemin Unix -> file:///path/to/file
-      return `file://${
-        normalizedPath.startsWith("/") ? "" : "/"
-      }${normalizedPath}`;
-    }
+    // Retourner une URL avec le protocole personnalisé assets://
+    const url = pathSegments.join("/");
+    return `assets://${url}`;
   });
 
   // Debug
