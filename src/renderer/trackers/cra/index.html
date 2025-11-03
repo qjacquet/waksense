@@ -1,39 +1,41 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cra Tracker</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="tracker-container" id="tracker-container">
-    <div class="resource-bars">
-      <!-- Affûtage bar -->
-      <div class="resource-bar affutage-bar">
-        <div class="bar-label">Affûtage</div>
-        <div class="bar-fill" id="affutage-fill" style="width: 0%"></div>
-        <div class="bar-value" id="affutage-value">0</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cra Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="tracker-container" id="tracker-container">
+      <div class="resource-bars">
+        <!-- Affûtage bar -->
+        <div class="resource-bar affutage-bar">
+          <div class="bar-label">Affûtage</div>
+          <div class="bar-fill" id="affutage-fill" style="width: 0%"></div>
+          <div class="bar-value" id="affutage-value">0</div>
+        </div>
+
+        <!-- Stacks indicator (Pointe and Balise) -->
+        <div class="stacks-container">
+          <span id="pointe-stacks" class="stack-indicator"></span>
+          <span id="balise-stacks" class="stack-indicator"></span>
+        </div>
+
+        <!-- Précision bar -->
+        <div class="resource-bar precision-bar">
+          <div class="bar-label">Précision</div>
+          <div class="bar-fill" id="precision-fill" style="width: 0%"></div>
+          <div class="bar-value" id="precision-value">0</div>
+          <span id="precision-max" class="bar-max">/ 300</span>
+        </div>
+
+        <!-- Tir précis indicator -->
+        <div id="tir-precis-indicator" class="tir-precis-indicator">
+          Tir précis actif
+        </div>
       </div>
-      
-      <!-- Stacks indicator (Pointe and Balise) -->
-      <div class="stacks-container">
-        <span id="pointe-stacks" class="stack-indicator"></span>
-        <span id="balise-stacks" class="stack-indicator"></span>
-      </div>
-      
-      <!-- Précision bar -->
-      <div class="resource-bar precision-bar">
-        <div class="bar-label">Précision</div>
-        <div class="bar-fill" id="precision-fill" style="width: 0%"></div>
-        <div class="bar-value" id="precision-value">0</div>
-        <span id="precision-max" class="bar-max">/ 300</span>
-      </div>
-      
-      <!-- Tir précis indicator -->
-      <div id="tir-precis-indicator" class="tir-precis-indicator">Tir précis actif</div>
     </div>
-  </div>
-  <script type="module" src="tracker.js"></script>
-</body>
+    <script type="module" src="tracker.js"></script>
+  </body>
 </html>

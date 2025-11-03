@@ -29,10 +29,15 @@ export function updateProgressBar(
 /**
  * Met à jour un indicateur de stack
  */
-export function updateStackIndicator(elementId: string, current: number, max: number, label: string): void {
+export function updateStackIndicator(
+  elementId: string,
+  current: number,
+  max: number,
+  label: string
+): void {
   const element = document.getElementById(elementId);
   if (element) {
-    element.textContent = current > 0 ? `${label}: ${current}/${max}` : '';
+    element.textContent = current > 0 ? `${label}: ${current}/${max}` : "";
   }
 }
 
@@ -43,12 +48,12 @@ export function updateBooleanIndicator(
   elementId: string,
   isActive: boolean,
   activeText: string,
-  inactiveDisplay: 'none' | 'block' = 'none'
+  inactiveDisplay: "none" | "block" = "none"
 ): void {
   const element = document.getElementById(elementId);
   if (element) {
     if (isActive) {
-      element.style.display = 'block';
+      element.style.display = "block";
       element.textContent = activeText;
     } else {
       element.style.display = inactiveDisplay;
@@ -88,4 +93,3 @@ export function setupTrackerEventListeners(
     window.electronAPI.onCombatStarted(onCombatStarted);
   }
 }
-
