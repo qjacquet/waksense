@@ -2,9 +2,13 @@
  * Window Manager - Gestion complète des fenêtres Electron
  */
 
-import { BrowserWindow, screen, BrowserWindowConstructorOptions } from 'electron';
-import * as path from 'path';
-import { Config } from '../core/config';
+import {
+  BrowserWindow,
+  BrowserWindowConstructorOptions,
+  screen,
+} from "electron";
+import * as path from "path";
+import { Config } from "../core/config";
 
 export interface WindowBounds {
   x: number;
@@ -40,18 +44,22 @@ export class WindowManager {
       fullscreenable?: boolean;
       minWidth?: number;
       minHeight?: number;
-      webPreferences?: BrowserWindowConstructorOptions['webPreferences'];
+      webPreferences?: BrowserWindowConstructorOptions["webPreferences"];
     } = {}
   ): BrowserWindow {
     const savedPos = Config.getOverlayPosition(id);
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
 
     const defaults: BrowserWindowConstructorOptions = {
       width: options.width || 400,
       height: options.height || 300,
-      x: savedPos?.x ?? options.x ?? (screenWidth - (options.width || 400)),
-      y: savedPos?.y ?? options.y ?? Math.floor((screenHeight - (options.height || 300)) / 2),
+      x: savedPos?.x ?? options.x ?? screenWidth - (options.width || 400),
+      y:
+        savedPos?.y ??
+        options.y ??
+        Math.floor((screenHeight - (options.height || 300)) / 2),
       frame: options.frame ?? false,
       transparent: options.transparent ?? true,
       alwaysOnTop: options.alwaysOnTop ?? true,
@@ -63,19 +71,19 @@ export class WindowManager {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, '..', 'preload.js'),
-        ...options.webPreferences
-      }
+        preload: path.join(__dirname, "..", "preload.js"),
+        ...options.webPreferences,
+      },
     };
 
     const window = new BrowserWindow(defaults);
 
-    window.on('moved', () => {
+    window.on("moved", () => {
       const bounds = window.getBounds();
       Config.saveOverlayPosition(id, bounds.x, bounds.y);
     });
 
-    window.on('resized', () => {
+    window.on("resized", () => {
       const bounds = window.getBounds();
       Config.saveOverlayPosition(id, bounds.x, bounds.y);
     });
@@ -97,16 +105,82 @@ export class WindowManager {
       frame: true,
       transparent: false,
       alwaysOnTop: false,
-      title: 'Waksense',
+      title: "Waksense",
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, '..', 'preload.js')
+        preload: path.join(__dirname, "..", "preload.js"),
       },
-      icon: path.join(__dirname, '..', '..', '..', 'Waksense.ico')
+      icon: path.join(__dirname, "..", "..", "..", "Waksense.ico"),
     });
 
-    this.windows.set('launcher', window);
+    this.windows.set("launcher", window);
+
+    return window;
+  }
+
+  /**
+   * Crée la fenêtre de debug pour prévisualiser les trackers
+   */
+  static createDebugWindow(): BrowserWindow {
+    // Si la fenêtre existe déjà, la réafficher
+    if (this.hasWindow("debug")) {
+      const existingWindow = this.getWindow("debug");
+      if (existingWindow && !existingWindow.isDestroyed()) {
+        existingWindow.show();
+        existingWindow.focus();
+        return existingWindow;
+      }
+    }
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
+
+    const window = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 800,
+      minHeight: 600,
+      x: Math.floor((screenWidth - 1200) / 2),
+      y: Math.floor((screenHeight - 800) / 2),
+      frame: true,
+      transparent: false,
+      alwaysOnTop: false,
+      title: "Waksense - Mode Debug",
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, "..", "preload.js"),
+      },
+      icon: path.join(__dirname, "..", "..", "..", "Waksense.ico"),
+    });
+
+    const htmlPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "renderer",
+      "core",
+      "debug",
+      "index.html"
+    );
+
+    this.setupWindowErrorHandlers(window, htmlPath, "DEBUG");
+    this.setupWindowConsoleLogging(window, "DEBUG");
+    this.setupWindowLifecycle(window, "debug");
+
+    window
+      .loadFile(htmlPath)
+      .then(() => {
+        window.show();
+        window.focus();
+      })
+      .catch((error) => {
+        console.error("[DEBUG] Error loading HTML:", error);
+      });
+
+    this.windows.set("debug", window);
 
     return window;
   }
@@ -130,22 +204,33 @@ export class WindowManager {
       transparent: true,
       alwaysOnTop: true,
       resizable: config.resizable ?? false,
-      frame: false
+      frame: false,
     });
 
-    const htmlPath = path.join(__dirname, '..', '..', 'renderer', 'trackers', className.toLowerCase(), htmlFile);
-    
+    const htmlPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "renderer",
+      "trackers",
+      className.toLowerCase(),
+      htmlFile
+    );
+
     this.setupWindowErrorHandlers(window, htmlPath, config.rendererName);
     this.setupWindowConsoleLogging(window, config.rendererName);
     this.setupWindowLifecycle(window, trackerId);
 
-    window.loadFile(htmlPath)
+    window
+      .loadFile(htmlPath)
       .then(() => {
         window.show();
         window.focus();
       })
       .catch((error) => {
-        console.error(`[${config.rendererName || 'TRACKER'}] Error loading HTML: ${error}`);
+        console.error(
+          `[${config.rendererName || "TRACKER"}] Error loading HTML: ${error}`
+        );
       });
 
     window.show();
@@ -155,23 +240,44 @@ export class WindowManager {
   /**
    * Configure les handlers d'erreur pour une fenêtre
    */
-  private static setupWindowErrorHandlers(window: BrowserWindow, htmlPath: string, rendererName?: string): void {
-    window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error(`[${rendererName || 'TRACKER'}] Failed to load: ${errorCode} - ${errorDescription} - ${validatedURL}`);
-      console.error(`[${rendererName || 'TRACKER'}] Attempted to load: ${htmlPath}`);
-    });
+  private static setupWindowErrorHandlers(
+    window: BrowserWindow,
+    htmlPath: string,
+    rendererName?: string
+  ): void {
+    window.webContents.on(
+      "did-fail-load",
+      (event, errorCode, errorDescription, validatedURL) => {
+        console.error(
+          `[${
+            rendererName || "TRACKER"
+          }] Failed to load: ${errorCode} - ${errorDescription} - ${validatedURL}`
+        );
+        console.error(
+          `[${rendererName || "TRACKER"}] Attempted to load: ${htmlPath}`
+        );
+      }
+    );
   }
 
   /**
    * Configure le logging console pour une fenêtre
    */
-  private static setupWindowConsoleLogging(window: BrowserWindow, rendererName?: string): void {
-    const logPrefix = rendererName || 'TRACKER';
-    window.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      console.log(`[${logPrefix} RENDERER ${level}]: ${message} (${sourceId}:${line})`);
-    });
+  private static setupWindowConsoleLogging(
+    window: BrowserWindow,
+    rendererName?: string
+  ): void {
+    const logPrefix = rendererName || "TRACKER";
+    window.webContents.on(
+      "console-message",
+      (event, level, message, line, sourceId) => {
+        console.log(
+          `[${logPrefix} RENDERER ${level}]: ${message} (${sourceId}:${line})`
+        );
+      }
+    );
 
-    window.webContents.once('did-finish-load', () => {
+    window.webContents.once("did-finish-load", () => {
       window.show();
       window.focus();
     });
@@ -180,8 +286,11 @@ export class WindowManager {
   /**
    * Configure le cycle de vie d'une fenêtre
    */
-  private static setupWindowLifecycle(window: BrowserWindow, trackerId: string): void {
-    window.on('closed', () => {
+  private static setupWindowLifecycle(
+    window: BrowserWindow,
+    trackerId: string
+  ): void {
+    window.on("closed", () => {
       this.closeWindow(trackerId);
     });
   }
@@ -189,7 +298,11 @@ export class WindowManager {
   /**
    * Envoie un message de manière sécurisée à une fenêtre
    */
-  static safeSendToWindow(window: BrowserWindow | null, channel: string, ...args: any[]): boolean {
+  static safeSendToWindow(
+    window: BrowserWindow | null,
+    channel: string,
+    ...args: any[]
+  ): boolean {
     if (!window || window.isDestroyed() || !window.webContents) {
       return false;
     }
@@ -206,18 +319,21 @@ export class WindowManager {
   /**
    * Toggle la visibilité d'une fenêtre
    */
-  static toggleWindow(window: BrowserWindow | undefined): { isVisible: boolean; result: string } {
+  static toggleWindow(window: BrowserWindow | undefined): {
+    isVisible: boolean;
+    result: string;
+  } {
     if (!window) {
-      return { isVisible: false, result: 'false' };
+      return { isVisible: false, result: "false" };
     }
 
     if (window.isVisible()) {
       window.hide();
-      return { isVisible: false, result: 'false' };
+      return { isVisible: false, result: "false" };
     } else {
       window.show();
       window.focus();
-      return { isVisible: true, result: 'true' };
+      return { isVisible: true, result: "true" };
     }
   }
 
@@ -263,4 +379,3 @@ export class WindowManager {
     return this.windows;
   }
 }
-

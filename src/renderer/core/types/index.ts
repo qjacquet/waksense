@@ -1,7 +1,7 @@
 /**
  * Types globaux pour les fichiers renderer
  */
-export type ClassType = 'Iop' | 'Cra' | 'Ouginak';
+export type ClassType = "Iop" | "Cra" | "Ouginak";
 
 declare global {
   interface Window {
@@ -16,9 +16,14 @@ declare global {
       createTracker: (className: string, playerName: string) => Promise<string>;
       closeTracker: (trackerId: string) => Promise<void>;
       getDeduplicationStats: () => Promise<any>;
-      getDetectedClasses: () => Promise<Array<{ className: string; playerName: string }>>;
+      getDetectedClasses: () => Promise<
+        Array<{ className: string; playerName: string }>
+      >;
       getAssetPath: (...pathSegments: string[]) => Promise<string>;
-      onClassDetected: (callback: (detection: { className: string; playerName: string }) => void) => void;
+      openDebug: () => Promise<void>;
+      onClassDetected: (
+        callback: (detection: { className: string; playerName: string }) => void
+      ) => void;
       onCombatStarted: (callback: () => void) => void;
       onCombatEnded: (callback: () => void) => void;
       onLogLine: (callback: (line: string, parsed: any) => void) => void;
@@ -28,4 +33,3 @@ declare global {
     };
   }
 }
-

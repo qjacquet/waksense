@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Waksense - Mode Debug</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="debug-container">
+      <div class="debug-header">
+        <h1>Mode Debug - Prévisualisation des Trackers</h1>
+      </div>
+
+      <div class="debug-content">
+        <div class="debug-sidebar">
+          <label for="tracker-select">Sélectionner un tracker :</label>
+          <select id="tracker-select" class="tracker-select">
+            <option value="">-- Choisir un tracker --</option>
+            <option value="cra/index.html">Cra - Tracker principal</option>
+            <option value="iop/boosts.html">Iop - Boosts</option>
+            <option value="iop/combos.html">Iop - Combos</option>
+            <option value="ouginak/index.html">
+              Ouginak - Tracker principal
+            </option>
+          </select>
+        </div>
+
+        <div class="debug-preview">
+          <div class="preview-placeholder" id="preview-placeholder">
+            <p>Sélectionnez un tracker dans la liste pour le prévisualiser</p>
+          </div>
+          <iframe
+            id="tracker-preview"
+            class="tracker-preview"
+            style="display: none"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="debug.js"></script>
+  </body>
+</html>
