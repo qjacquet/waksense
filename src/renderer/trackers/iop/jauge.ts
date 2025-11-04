@@ -554,54 +554,53 @@ class IopJaugeTracker {
       this.stopCourrouxLottie();
     }
 
-    // Puissance
-    if (this.puissance > 0 && this.puissanceLayer) {
+    // Puissance - maintenant utilise l'effet de remplissage de concentration
+    if (this.concentration > 0 && this.puissanceLayer) {
       this.svgElement.classList.add("has-puissance");
       this.showLayer(this.puissanceLayer);
       this.puissanceLayer.classList.add("active");
 
-      // Ajouter la classe basée sur la valeur de puissance
-      if (this.puissance <= 10) {
-        this.puissanceLayer.classList.add("puissance-low");
-      } else if (this.puissance <= 25) {
-        this.puissanceLayer.classList.add("puissance-medium");
-      } else {
-        this.puissanceLayer.classList.add("puissance-high");
+      // Calculer le pourcentage de remplissage basé sur la concentration (0-100%)
+      const normalizedConcentration = Math.min(this.concentration / 100, 1);
+      
+      // Mettre à jour le clipPath de remplissage (remplissage de bas en haut)
+      const fillRect = this.svgElement.querySelector(
+        "#concentration-fill-rect"
+      ) as SVGRectElement;
+      if (fillRect) {
+        // Avec clipPathUnits="objectBoundingBox", les coordonnées sont relatives (0-1)
+        // Le y=1 correspond au bas de la bounding box, y=0 au haut
+        // Pour remplir de bas en haut, on commence à y=1 et on remonte
+        // height est le pourcentage de remplissage (0 à 1)
+        // y = 1 - normalizedConcentration (pour commencer du bas)
+        fillRect.setAttribute("x", "0");
+        fillRect.setAttribute("y", String(1 - normalizedConcentration));
+        fillRect.setAttribute("width", "1");
+        fillRect.setAttribute("height", String(normalizedConcentration));
       }
 
-      // Ajuster dynamiquement l'opacité et le rayonnement selon la valeur exacte (0-50)
+      // Ajuster l'opacité et la couleur selon la concentration
       const puissancePaths = this.puissanceLayer.querySelectorAll(
         ".puissance-path"
       ) as NodeListOf<SVGPathElement>;
-      const normalizedPuissance = this.puissance / 50;
       
       puissancePaths.forEach((path) => {
-        // Ajuster l'opacité selon la valeur (0.7 à 1.0) - plus discret
-        path.style.opacity = String(0.7 + normalizedPuissance * 0.3);
+        // Opacité basée sur la concentration (0.6 à 1.0)
+        path.style.opacity = String(0.6 + normalizedConcentration * 0.4);
         
-        // Ajuster l'intensité du rayonnement (drop-shadow) selon la puissance - plus discret
-        // Plus la puissance est élevée, plus le rayonnement est intense mais de manière subtile
-        const glowIntensity = normalizedPuissance;
-        const glowRadius1 = 1 + glowIntensity * 1.5; // 1 à 2.5px
-        const glowRadius2 = 2 + glowIntensity * 3; // 2 à 5px
-        const glowRadius3 = 3 + glowIntensity * 5; // 3 à 8px
-        
-        const opacity1 = 0.3 + glowIntensity * 0.3; // 0.3 à 0.6
-        const opacity2 = 0.25 + glowIntensity * 0.2; // 0.25 à 0.45
-        const opacity3 = 0.2 + glowIntensity * 0.1; // 0.2 à 0.3
-        
-        // Appliquer plusieurs couches de drop-shadow pour un effet de rayonnement progressif mais discret
-        if (normalizedPuissance > 0.5) {
-          // Puissance élevée : 3 couches de rayonnement discret
-          path.style.filter = `drop-shadow(0 0 ${glowRadius1}px rgba(255, 215, 0, ${opacity1})) drop-shadow(0 0 ${glowRadius2}px rgba(255, 215, 0, ${opacity2})) drop-shadow(0 0 ${glowRadius3}px rgba(255, 215, 0, ${opacity3}))`;
-        } else if (normalizedPuissance > 0.2) {
-          // Puissance moyenne : 2 couches de rayonnement discret
-          path.style.filter = `drop-shadow(0 0 ${glowRadius1}px rgba(255, 215, 0, ${opacity1})) drop-shadow(0 0 ${glowRadius2}px rgba(255, 215, 0, ${opacity2}))`;
+        // Ajouter un léger effet de brillance pour la concentration élevée
+        if (normalizedConcentration > 0.7) {
+          path.style.filter = `drop-shadow(0 0 2px rgba(74, 144, 226, 0.6)) drop-shadow(0 0 4px rgba(74, 144, 226, 0.4))`;
+        } else if (normalizedConcentration > 0.4) {
+          path.style.filter = `drop-shadow(0 0 1.5px rgba(74, 144, 226, 0.5))`;
         } else {
-          // Puissance faible : 1 couche de rayonnement très discret
-          path.style.filter = `drop-shadow(0 0 ${glowRadius1}px rgba(255, 215, 0, ${opacity1}))`;
+          path.style.filter = "none";
         }
       });
+    } else if (this.puissanceLayer) {
+      // Cacher le layer si pas de concentration
+      this.hideLayer(this.puissanceLayer);
+      this.puissanceLayer.classList.remove("active");
     }
 
     // Préparation

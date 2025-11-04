@@ -19,6 +19,12 @@
         viewBox="0 0 91.000000 83.000000"
         preserveAspectRatio="xMidYMid meet"
       >
+        <defs>
+          <!-- ClipPath pour l'effet de remplissage de concentration -->
+          <clipPath id="concentration-fill-clip" clipPathUnits="objectBoundingBox">
+            <rect id="concentration-fill-rect" x="0" y="1" width="1" height="0"/>
+          </clipPath>
+        </defs>
         <g transform="translate(0.000000,83.000000) scale(0.100000,-0.100000)">
           <!-- Base layer - toujours visible -->
           <g id="base-layer" class="svg-layer base-layer">
@@ -114,13 +120,14 @@ l-29 19 0 -219z m144 -135 c4 -9 25 -28 47 -42 53 -35 71 -67 72 -124 1 -55
             />
           </g>
 
-          <!-- Puissance layer - Doré -->
+          <!-- Puissance layer - Remplissage de concentration -->
           <g id="puissance-layer" class="svg-layer puissance-layer" style="display: none;">
             <path
               class="puissance-path"
-              fill="#FFD700"
+              fill="#4a90e2"
               stroke="none"
-              opacity="0.85"
+              opacity="0.9"
+              clip-path="url(#concentration-fill-clip)"
               d="M340 563 c0 -246 -2 -251 -74 -276 -22 -8 -41 -18 -43 -24 -2 -6 17
 -19 42 -28 63 -24 68 -39 38 -98 -13 -27 -22 -51 -20 -54 3 -2 27 5 53 16 26
 12 55 19 65 16 10 -4 25 -27 34 -55 9 -28 20 -50 25 -50 5 0 16 20 26 45 23

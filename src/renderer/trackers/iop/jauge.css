@@ -30,14 +30,14 @@ body {
   top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
+  width: 250px;
+  height: 250px;
   pointer-events: none;
   z-index: 10;
-  opacity: 0.7;
+  opacity: 0.6;
   /* Changer la couleur de bleu à rouge avec hue-rotate */
   /* Le bleu est à ~240°, le rouge à 0°, donc on fait -240° (ou +120°) */
-  filter: hue-rotate(-240deg) saturate(1.2);
+  filter: hue-rotate(120deg) saturate(1.2);
 }
 
 /* Conteneur Lottie spécifique pour préparation (éclairs) */
@@ -46,9 +46,9 @@ body {
   filter: none;
   opacity: 0.8;
   /* Ajuster la hauteur et la position pour éviter la duplication */
-  height: 150px;
+  height: 200px;
   width: 200px;
-  top: 45%;
+  left: 55%;
   overflow: hidden;
 }
 
@@ -122,31 +122,19 @@ body {
 
 /* Les flammes et particules ont été remplacées par Lottie */
 
-/* Puissance layer - Doré avec rayonnement discret */
+/* Puissance layer - Remplissage de concentration (bleu) */
 .puissance-layer {
   mix-blend-mode: screen;
 }
 
 .puissance-path {
   transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: #FFD700;
-  filter: drop-shadow(0 0 1px rgba(255, 215, 0, 0.3));
+  fill: #4a90e2;
+  filter: none;
 }
 
 .puissance-layer.active {
   display: block;
-}
-
-.puissance-layer.active.puissance-low .puissance-path {
-  filter: drop-shadow(0 0 1.5px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 3px rgba(255, 215, 0, 0.25));
-}
-
-.puissance-layer.active.puissance-medium .puissance-path {
-  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5)) drop-shadow(0 0 4px rgba(255, 215, 0, 0.3)) drop-shadow(0 0 6px rgba(255, 215, 0, 0.2));
-}
-
-.puissance-layer.active.puissance-high .puissance-path {
-  filter: drop-shadow(0 0 2.5px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 5px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 8px rgba(255, 215, 0, 0.25));
 }
 
 /* Préparation layer - Vert */
