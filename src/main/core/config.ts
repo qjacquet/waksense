@@ -13,7 +13,7 @@ export interface AppSettings {
     [className: string]: string[];
   };
   overlayPositions?: {
-    [key: string]: { x: number; y: number };
+    [key: string]: { x: number; y: number; width?: number; height?: number };
   };
 }
 
@@ -132,16 +132,24 @@ export class Config {
   /**
    * Sauvegarde la position d'un overlay
    */
-  static saveOverlayPosition(key: string, x: number, y: number): void {
+  static saveOverlayPosition(key: string, x: number, y: number, width?: number, height?: number): void {
     const positions = this.store.get('overlayPositions', {});
-    positions[key] = { x, y };
+    const existing = positions[key] || {};
+    positions[key] = { 
+      x, 
+      y,
+      ...(width !== undefined && { width }),
+      ...(height !== undefined && { height }),
+      ...(existing.width !== undefined && width === undefined && { width: existing.width }),
+      ...(existing.height !== undefined && height === undefined && { height: existing.height })
+    };
     this.store.set('overlayPositions', positions);
   }
 
   /**
    * Obtient la position d'un overlay
    */
-  static getOverlayPosition(key: string): { x: number; y: number } | undefined {
+  static getOverlayPosition(key: string): { x: number; y: number; width?: number; height?: number } | undefined {
     const positions = this.store.get('overlayPositions', {});
     return positions[key];
   }

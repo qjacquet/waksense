@@ -4,6 +4,9 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 
+// Ne pas charger lottie-web ici - on va utiliser le CDN dans le HTML
+// pour éviter les problèmes de résolution de modules dans le preload
+
 // Expose les API IPC au renderer de manière sécurisée
 contextBridge.exposeInMainWorld("electronAPI", {
   // Configuration et personnages
@@ -70,6 +73,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.removeAllListeners(channel);
   },
 });
+
+// lottie-web sera chargé via CDN dans le HTML, pas besoin de l'exposer ici
 
 // Déclarer les types pour TypeScript
 declare global {

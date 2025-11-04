@@ -52,14 +52,18 @@ export class WindowManager {
     const { width: screenWidth, height: screenHeight } =
       primaryDisplay.workAreaSize;
 
+    // Utiliser les dimensions sauvegardées si disponibles, sinon les options, sinon les valeurs par défaut
+    const width = savedPos?.width ?? options.width ?? 400;
+    const height = savedPos?.height ?? options.height ?? 300;
+
     const defaults: BrowserWindowConstructorOptions = {
-      width: options.width || 400,
-      height: options.height || 300,
-      x: savedPos?.x ?? options.x ?? screenWidth - (options.width || 400),
+      width,
+      height,
+      x: savedPos?.x ?? options.x ?? screenWidth - width,
       y:
         savedPos?.y ??
         options.y ??
-        Math.floor((screenHeight - (options.height || 300)) / 2),
+        Math.floor((screenHeight - height) / 2),
       frame: options.frame ?? false,
       transparent: options.transparent ?? true,
       alwaysOnTop: options.alwaysOnTop ?? true,
@@ -80,12 +84,12 @@ export class WindowManager {
 
     window.on("moved", () => {
       const bounds = window.getBounds();
-      Config.saveOverlayPosition(id, bounds.x, bounds.y);
+      Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
     });
 
     window.on("resized", () => {
       const bounds = window.getBounds();
-      Config.saveOverlayPosition(id, bounds.x, bounds.y);
+      Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
     });
 
     this.windows.set(id, window);

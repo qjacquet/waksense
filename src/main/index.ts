@@ -491,18 +491,21 @@ function startLogMonitoring(logFilePath: string): void {
               }
             );
 
-            // Positionner le combos à côté du boosts
+            // Positionner le combos à côté du boosts uniquement si aucune position sauvegardée
             if (
               boostsWindow &&
               combosWindow &&
               !boostsWindow.isDestroyed() &&
               !combosWindow.isDestroyed()
             ) {
-              const boostsBounds = boostsWindow.getBounds();
-              combosWindow.setPosition(
-                boostsBounds.x + boostsBounds.width + 10,
-                boostsBounds.y
-              );
+              const savedCombosPos = Config.getOverlayPosition(combosTrackerId);
+              if (!savedCombosPos) {
+                const boostsBounds = boostsWindow.getBounds();
+                combosWindow.setPosition(
+                  boostsBounds.x + boostsBounds.width + 10,
+                  boostsBounds.y
+                );
+              }
             }
 
             // Afficher le combos si boosts est visible
@@ -515,7 +518,7 @@ function startLogMonitoring(logFilePath: string): void {
               combosWindow.focus();
             }
 
-            // Si la jauge existe déjà, l'afficher aussi et la repositionner
+            // Si la jauge existe déjà, l'afficher aussi et la repositionner uniquement si aucune position sauvegardée
             const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
             if (
               jaugeWindow &&
@@ -523,11 +526,14 @@ function startLogMonitoring(logFilePath: string): void {
               combosWindow &&
               !combosWindow.isDestroyed()
             ) {
-              const combosBounds = combosWindow.getBounds();
-              jaugeWindow.setPosition(
-                combosBounds.x + combosBounds.width + 10,
-                combosBounds.y
-              );
+              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
+              if (!savedJaugePos) {
+                const combosBounds = combosWindow.getBounds();
+                jaugeWindow.setPosition(
+                  combosBounds.x + combosBounds.width + 10,
+                  combosBounds.y
+                );
+              }
               if (boostsWindow?.isVisible() || combosWindow.isVisible()) {
                 jaugeWindow.show();
                 jaugeWindow.focus();
@@ -562,18 +568,21 @@ function startLogMonitoring(logFilePath: string): void {
               }
             );
 
-            // Positionner la jauge à côté du combos
+            // Positionner la jauge à côté du combos uniquement si aucune position sauvegardée
             if (
               combosWindow &&
               jaugeWindow &&
               !combosWindow.isDestroyed() &&
               !jaugeWindow.isDestroyed()
             ) {
-              const combosBounds = combosWindow.getBounds();
-              jaugeWindow.setPosition(
-                combosBounds.x + combosBounds.width + 10,
-                combosBounds.y
-              );
+              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
+              if (!savedJaugePos) {
+                const combosBounds = combosWindow.getBounds();
+                jaugeWindow.setPosition(
+                  combosBounds.x + combosBounds.width + 10,
+                  combosBounds.y
+                );
+              }
             }
 
             // Afficher la jauge si les autres trackers sont visibles

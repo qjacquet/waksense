@@ -222,17 +222,22 @@ export function setupIpcHandlers(
           );
         }
 
+        // Positionner manuellement uniquement si aucune position sauvegardée n'existe
         if (
           boostsWindow &&
           combosWindow &&
           !boostsWindow.isDestroyed() &&
           !combosWindow.isDestroyed()
         ) {
-          const boostsBounds = boostsWindow.getBounds();
-          combosWindow.setPosition(
-            boostsBounds.x + boostsBounds.width + 10,
-            boostsBounds.y
-          );
+          const combosTrackerId = `tracker-${className}-${playerName}-combos`;
+          const savedCombosPos = Config.getOverlayPosition(combosTrackerId);
+          if (!savedCombosPos) {
+            const boostsBounds = boostsWindow.getBounds();
+            combosWindow.setPosition(
+              boostsBounds.x + boostsBounds.width + 10,
+              boostsBounds.y
+            );
+          }
         }
 
         if (
@@ -241,11 +246,15 @@ export function setupIpcHandlers(
           !combosWindow.isDestroyed() &&
           !jaugeWindow.isDestroyed()
         ) {
-          const combosBounds = combosWindow.getBounds();
-          jaugeWindow.setPosition(
-            combosBounds.x + combosBounds.width + 10,
-            combosBounds.y
-          );
+          const jaugeTrackerId = `tracker-${className}-${playerName}-jauge`;
+          const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
+          if (!savedJaugePos) {
+            const combosBounds = combosWindow.getBounds();
+            jaugeWindow.setPosition(
+              combosBounds.x + combosBounds.width + 10,
+              combosBounds.y
+            );
+          }
         }
 
         ensureLogMonitoring();
