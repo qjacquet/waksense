@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -14,8 +19,8 @@ body {
 
 .jauge-overlay {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,7 +32,7 @@ body {
 /* Conteneur Lottie pour l'effet courroux */
 .lottie-container {
   position: absolute;
-  top: 40%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 250px;
@@ -38,6 +43,14 @@ body {
   /* Changer la couleur de bleu à rouge avec hue-rotate */
   /* Le bleu est à ~240°, le rouge à 0°, donc on fait -240° (ou +120°) */
   filter: hue-rotate(120deg) saturate(1.2);
+}
+
+/* Ajustements spécifiques pour l'animation de Courroux */
+#courroux-lottie-container {
+  /* Remonter légèrement l'animation */
+  top: 48%;
+  /* Teinte plus chaude (rouge/orange) */
+  filter: hue-rotate(150deg) saturate(1.8) brightness(1.05);
 }
 
 /* Conteneur Lottie spécifique pour préparation (éclairs) */
@@ -129,7 +142,8 @@ body {
 
 .puissance-path {
   transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: #4a90e2;
+  /* Teinte acier discrète pour la lame */
+  fill: #7f8ea3;
   filter: none;
 }
 

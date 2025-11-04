@@ -23,6 +23,7 @@ class DebugUI {
   private previewPlaceholder: HTMLElement | null = null;
   private debugControls: HTMLElement | null = null;
   private controlsContainer: HTMLElement | null = null;
+  private themeSwitch: HTMLInputElement | null = null;
   private currentTracker: string = "";
   private currentValues: { [key: string]: any } = {};
 
@@ -232,6 +233,7 @@ class DebugUI {
     this.previewPlaceholder = document.getElementById("preview-placeholder");
     this.debugControls = document.getElementById("debug-controls");
     this.controlsContainer = document.getElementById("controls-container");
+    this.themeSwitch = document.getElementById("theme-switch") as HTMLInputElement | null;
 
     if (
       !this.trackerSelect ||
@@ -241,6 +243,22 @@ class DebugUI {
     ) {
       console.error("Debug UI: Required elements not found");
       return;
+    }
+
+    // Init theme from localStorage
+    const savedTheme = localStorage.getItem("debugTheme");
+    if (savedTheme === "light") {
+      document.body.classList.add("light-theme");
+    } else {
+      document.body.classList.remove("light-theme");
+    }
+    if (this.themeSwitch) {
+      this.themeSwitch.checked = document.body.classList.contains("light-theme");
+      this.themeSwitch.addEventListener("change", () => {
+        const useLight = this.themeSwitch!.checked;
+        document.body.classList.toggle("light-theme", useLight);
+        localStorage.setItem("debugTheme", useLight ? "light" : "dark");
+      });
     }
 
     this.trackerSelect.addEventListener("change", () =>

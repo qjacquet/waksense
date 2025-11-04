@@ -13,6 +13,12 @@ body {
   overflow: hidden;
 }
 
+/* Light theme */
+body.light-theme {
+  background: #f5f5f5;
+  color: #111111;
+}
+
 .debug-container {
   display: flex;
   flex-direction: column;
@@ -23,12 +29,35 @@ body {
   background: #2a2a2a;
   padding: 1rem 1.5rem;
   border-bottom: 2px solid #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .debug-header h1 {
   font-size: 1.25rem;
   font-weight: 600;
   color: #ffffff;
+}
+
+body.light-theme .debug-header {
+  background: #ffffff;
+  border-bottom-color: #e5e5e5;
+}
+
+body.light-theme .debug-header h1 {
+  color: #111111;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.theme-toggle label {
+  font-size: 0.9rem;
+  color: inherit;
 }
 
 .debug-content {
@@ -45,6 +74,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+body.light-theme .debug-sidebar {
+  background: #fafafa;
+  border-right-color: #e5e5e5;
 }
 
 .debug-sidebar label {
@@ -86,6 +120,10 @@ body {
   position: relative;
   background: #1a1a1a;
   overflow: auto;
+}
+
+body.light-theme .debug-preview {
+  background: #f5f5f5;
 }
 
 .preview-placeholder {

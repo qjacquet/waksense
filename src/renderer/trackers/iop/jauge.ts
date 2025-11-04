@@ -37,6 +37,53 @@ class IopJaugeTracker {
   private preparationLottieAnimation: any = null;
 
   // Mapping des coûts de sorts Iop (pour détection des sorts 4 PA)
+  // Animation state for concentration fill (0..1)
+  private currentFillNormalized: number = 0;
+  private targetFillNormalized: number = 0;
+  private fillAnimationFrame: number | null = null;
+  private concentrationFillRect: SVGRectElement | null = null;
+
+  private animateFillTo(target: number): void {
+    this.targetFillNormalized = Math.max(0, Math.min(1, target));
+    if (this.fillAnimationFrame !== null) {
+      return; // already animating; the loop will pick up the new target
+    }
+    const step = () => {
+      const diff = this.targetFillNormalized - this.currentFillNormalized;
+      if (Math.abs(diff) < 0.002) {
+        this.currentFillNormalized = this.targetFillNormalized;
+      } else {
+        // ease towards target
+        this.currentFillNormalized += diff * 0.15;
+      }
+      if (!this.concentrationFillRect && this.svgElement) {
+        this.concentrationFillRect = this.svgElement.querySelector(
+          "#concentration-fill-rect"
+        ) as SVGRectElement | null;
+      }
+      if (this.concentrationFillRect) {
+        this.concentrationFillRect.setAttribute("x", "0");
+        this.concentrationFillRect.setAttribute("y", "0");
+        this.concentrationFillRect.setAttribute(
+          "width",
+          "1"
+        );
+        this.concentrationFillRect.setAttribute(
+          "height",
+          String(this.currentFillNormalized)
+        );
+      }
+      if (this.currentFillNormalized !== this.targetFillNormalized) {
+        this.fillAnimationFrame = requestAnimationFrame(step);
+      } else {
+        if (this.fillAnimationFrame !== null) {
+          cancelAnimationFrame(this.fillAnimationFrame);
+        }
+        this.fillAnimationFrame = null;
+      }
+    };
+    this.fillAnimationFrame = requestAnimationFrame(step);
+  }
   private readonly spellCostMap: Map<string, string> = new Map([
     ["Épée céleste", "2PA"],
     ["Fulgur", "3PA"],
@@ -562,45 +609,64 @@ class IopJaugeTracker {
 
       // Calculer le pourcentage de remplissage basé sur la concentration (0-100%)
       const normalizedConcentration = Math.min(this.concentration / 100, 1);
-      
-      // Mettre à jour le clipPath de remplissage (remplissage de bas en haut)
-      const fillRect = this.svgElement.querySelector(
-        "#concentration-fill-rect"
-      ) as SVGRectElement;
-      if (fillRect) {
-        // Avec clipPathUnits="objectBoundingBox", les coordonnées sont relatives (0-1)
-        // Le y=1 correspond au bas de la bounding box, y=0 au haut
-        // Pour remplir de bas en haut, on commence à y=1 et on remonte
-        // height est le pourcentage de remplissage (0 à 1)
-        // y = 1 - normalizedConcentration (pour commencer du bas)
-        fillRect.setAttribute("x", "0");
-        fillRect.setAttribute("y", String(1 - normalizedConcentration));
-        fillRect.setAttribute("width", "1");
-        fillRect.setAttribute("height", String(normalizedConcentration));
-      }
+      // Démarrer/mettre à jour l'animation de remplissage vers la cible
+      this.animateFillTo(normalizedConcentration);
 
       // Ajuster l'opacité et la couleur selon la concentration
       const puissancePaths = this.puissanceLayer.querySelectorAll(
         ".puissance-path"
       ) as NodeListOf<SVGPathElement>;
       
+      const effectiveConcentration = this.currentFillNormalized;
       puissancePaths.forEach((path) => {
         // Opacité basée sur la concentration (0.6 à 1.0)
-        path.style.opacity = String(0.6 + normalizedConcentration * 0.4);
-        
-        // Ajouter un léger effet de brillance pour la concentration élevée
-        if (normalizedConcentration > 0.7) {
-          path.style.filter = `drop-shadow(0 0 2px rgba(74, 144, 226, 0.6)) drop-shadow(0 0 4px rgba(74, 144, 226, 0.4))`;
-        } else if (normalizedConcentration > 0.4) {
-          path.style.filter = `drop-shadow(0 0 1.5px rgba(74, 144, 226, 0.5))`;
-        } else {
-          path.style.filter = "none";
+        path.style.opacity = String(0.6 + effectiveConcentration * 0.4);
+
+        const filters: string[] = [];
+
+        // Lueur acier progressive (plus prononcée)
+        if (effectiveConcentration > 0.7) {
+          filters.push(
+            `drop-shadow(0 0 2.5px rgba(140, 160, 180, 0.45))`,
+            `drop-shadow(0 0 5px rgba(140, 160, 180, 0.35))`
+          );
+        } else if (effectiveConcentration > 0.4) {
+          filters.push(`drop-shadow(0 0 2px rgba(140, 160, 180, 0.35))`);
         }
+
+        // Relief (biseau) avec ombres superposées, croît avec la concentration
+        const baseShadowAlpha = 0.15 + 0.25 * effectiveConcentration; // 0.15 -> 0.40
+        const highlightAlpha = 0.05 + 0.15 * effectiveConcentration; // 0.05 -> 0.20
+        filters.push(
+          `drop-shadow(0 1px 1px rgba(0, 0, 0, ${baseShadowAlpha.toFixed(3)}))`,
+          `drop-shadow(0 -1px 1px rgba(255, 255, 255, ${highlightAlpha.toFixed(3)}))`
+        );
+
+        // Éclat spéculaire à partir de 90%, plus marqué
+        if (effectiveConcentration >= 0.9) {
+          const t = (effectiveConcentration - 0.9) / 0.1; // 0..1
+          const glowSize = 3 + 9 * t; // 3px -> 12px
+          const glowAlpha = 0.15 + 0.35 * t; // 0.15 -> 0.50
+          const streakAlpha = 0.10 + 0.25 * t; // 0.10 -> 0.35
+          filters.push(
+            `drop-shadow(0 0 ${glowSize.toFixed(1)}px rgba(255, 255, 255, ${glowAlpha.toFixed(3)}))`,
+            // léger streak vers le haut pour simuler un reflet
+            `drop-shadow(0 -2px ${(2 + 4 * t).toFixed(1)}px rgba(255, 255, 255, ${streakAlpha.toFixed(3)}))`
+          );
+        }
+
+        path.style.filter = filters.join(" ") || "none";
       });
     } else if (this.puissanceLayer) {
       // Cacher le layer si pas de concentration
       this.hideLayer(this.puissanceLayer);
       this.puissanceLayer.classList.remove("active");
+      // Stopper l'animation et réinitialiser
+      this.targetFillNormalized = 0;
+      this.currentFillNormalized = 0;
+      if (this.concentrationFillRect) {
+        this.concentrationFillRect.setAttribute("height", "0");
+      }
     }
 
     // Préparation
