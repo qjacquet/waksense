@@ -451,6 +451,9 @@ class IopBoostsTracker {
   }
 
   private updateUI(): void {
+    if (!this.debugMode) {
+      return;
+    }
     updateProgressBar(
       "concentration-fill",
       "concentration-value",

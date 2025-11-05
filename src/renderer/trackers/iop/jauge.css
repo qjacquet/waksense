@@ -41,7 +41,7 @@ body {
 
 /* Ajustements spécifiques pour l'animation de Courroux */
 #courroux-lottie-container {
-  top: 47%;
+  top: 47.5%;
   height: 180px;
   opacity: 0.8;
   filter: hue-rotate(120deg) saturate(1.2);
@@ -66,13 +66,15 @@ body {
 /* Base layer - toujours visible */
 .base-layer {
   display: block;
+  stroke:white;
+  stroke-width: 7;
 }
 
 .base-path {
   transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
   fill: #685c4d;
-  stroke: #685c4d;
-  stroke-width: 2;
+    stroke:white;
+    stroke-width: 7;
 }
 
 /* SVG Layers - Positionnement en superposition */
