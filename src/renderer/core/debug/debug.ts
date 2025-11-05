@@ -79,6 +79,40 @@ class DebugUI {
         default: false,
       },
     ],
+    "cra/jauge.html": [
+      {
+        id: "affutage",
+        label: "Affûtage",
+        type: "slider",
+        min: 0,
+        max: 100,
+        default: 0,
+      },
+      {
+        id: "precision",
+        label: "Précision",
+        type: "slider",
+        min: 0,
+        max: 300,
+        default: 0,
+      },
+      {
+        id: "precisionMax",
+        label: "Précision Max",
+        type: "select",
+        default: 300,
+        options: [
+          { value: 200, label: "200" },
+          { value: 300, label: "300" },
+        ],
+      },
+      {
+        id: "tirPrecisActive",
+        label: "Tir Précis Actif",
+        type: "checkbox",
+        default: false,
+      },
+    ],
     "iop/boosts.html": [
       {
         id: "concentration",

@@ -601,6 +601,78 @@ function startLogMonitoring(logFilePath: string): void {
               jaugeWindow.focus();
             }
           }
+        } else if (data.fighter.className === "Cra") {
+          // Gestion spéciale pour CRA (tracker + jauge)
+          const trackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}`;
+          const jaugeTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-jauge`;
+
+          // Si les trackers n'existent pas, les créer
+          if (!WindowManager.hasWindow(trackerId)) {
+            WindowManager.createTrackerWindow(
+              trackerId,
+              "index.html",
+              "cra",
+              {
+                width: 320,
+                height: 200,
+                resizable: false,
+              }
+            );
+          } else {
+            const trackerWindow = WindowManager.getWindow(trackerId);
+            if (trackerWindow && !trackerWindow.isDestroyed()) {
+              trackerWindow.show();
+              trackerWindow.focus();
+            }
+            // Si tracker est affiché, afficher aussi jauge si elle existe
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (trackerWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
+            }
+          }
+
+          if (!WindowManager.hasWindow(jaugeTrackerId)) {
+            const trackerWindow = WindowManager.getWindow(trackerId);
+            const jaugeWindow = WindowManager.createTrackerWindow(
+              jaugeTrackerId,
+              "jauge.html",
+              "cra",
+              {
+                width: 300,
+                height: 350,
+                resizable: true,
+                rendererName: "CRA JAUGE",
+              }
+            );
+            // Positionner manuellement uniquement si aucune position sauvegardée n'existe
+            if (
+              trackerWindow &&
+              jaugeWindow &&
+              !trackerWindow.isDestroyed() &&
+              !jaugeWindow.isDestroyed()
+            ) {
+              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
+              if (!savedJaugePos) {
+                const trackerBounds = trackerWindow.getBounds();
+                jaugeWindow.setPosition(
+                  trackerBounds.x + trackerBounds.width + 10,
+                  trackerBounds.y
+                );
+              }
+            }
+            if (trackerWindow?.isVisible()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
+            }
+          } else {
+            const trackerWindow = WindowManager.getWindow(trackerId);
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (trackerWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.show();
+              jaugeWindow.focus();
+            }
+          }
         } else {
           // Pour les autres classes, créer le tracker standard
           if (!WindowManager.hasWindow(trackerId)) {

@@ -272,6 +272,108 @@ export function setupIpcHandlers(
         return `${boostsTrackerId},${combosTrackerId},${jaugeTrackerId}:${isVisible}`;
       }
 
+      // Gestion spéciale pour CRA (tracker + jauge)
+      if (className.toLowerCase() === "cra") {
+        const trackerId = `tracker-${className}-${playerName}`;
+        const jaugeTrackerId = `tracker-${className}-${playerName}-jauge`;
+
+        const trackerExists = WindowManager.hasWindow(trackerId);
+        const jaugeExists = WindowManager.hasWindow(jaugeTrackerId);
+
+        if (jaugeExists) {
+          const trackerWindow = trackerExists
+            ? WindowManager.getWindow(trackerId)
+            : undefined;
+          const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+          const isCurrentlyVisible =
+            (jaugeWindow?.isVisible() ?? false) ||
+            (trackerWindow?.isVisible() ?? false);
+
+          if (isCurrentlyVisible) {
+            trackerWindow?.hide();
+            jaugeWindow?.hide();
+          } else {
+            trackerWindow?.show();
+            trackerWindow?.focus();
+            jaugeWindow?.show();
+            jaugeWindow?.focus();
+          }
+
+          return `${trackerId},${jaugeTrackerId}:${!isCurrentlyVisible}`;
+        }
+
+        let trackerWindow: BrowserWindow | undefined;
+        let jaugeWindow: BrowserWindow | undefined;
+
+        if (trackerExists) {
+          trackerWindow = WindowManager.getWindow(trackerId);
+          jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            "cra",
+            {
+              width: 300,
+              height: 350,
+              resizable: true,
+              rendererName: "CRA JAUGE",
+            }
+          );
+          if (trackerWindow?.isVisible()) {
+            jaugeWindow?.show();
+          }
+        } else {
+          trackerWindow = WindowManager.createTrackerWindow(
+            trackerId,
+            "index.html",
+            className,
+            {
+              width: 320,
+              height: 200,
+              resizable: false,
+            }
+          );
+          jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            "cra",
+            {
+              width: 300,
+              height: 350,
+              resizable: true,
+              rendererName: "CRA JAUGE",
+            }
+          );
+        }
+
+        // Positionner manuellement uniquement si aucune position sauvegardée n'existe
+        if (
+          trackerWindow &&
+          jaugeWindow &&
+          !trackerWindow.isDestroyed() &&
+          !jaugeWindow.isDestroyed()
+        ) {
+          const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
+          if (!savedJaugePos) {
+            const trackerBounds = trackerWindow.getBounds();
+            jaugeWindow.setPosition(
+              trackerBounds.x + trackerBounds.width + 10,
+              trackerBounds.y
+            );
+          }
+        }
+
+        ensureLogMonitoring();
+
+        const isVisible =
+          (jaugeWindow &&
+            !jaugeWindow.isDestroyed() &&
+            jaugeWindow.isVisible()) ||
+          (trackerWindow &&
+            !trackerWindow.isDestroyed() &&
+            trackerWindow.isVisible());
+        return `${trackerId},${jaugeTrackerId}:${isVisible}`;
+      }
+
       const trackerId = `tracker-${className}-${playerName}`;
 
       if (WindowManager.hasWindow(trackerId)) {

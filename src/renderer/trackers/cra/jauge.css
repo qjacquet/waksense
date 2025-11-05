@@ -1,0 +1,141 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.jauge-overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  -webkit-app-region: drag;
+}
+
+/* Conteneur Lottie pour l'effet Tir précis */
+.lottie-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 250px;
+  height: 250px;
+  pointer-events: none;
+}
+
+/* Conteneur Lottie spécifique pour Tir précis (crosshair) */
+.tir-precis-lottie-container {
+  filter: none;
+  z-index: 10;
+  opacity: 0.9;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  top: calc(50% + 31px); /* Aligné au pixel près avec le centre de la cible */
+  left: calc(50% + 2px);
+  transform: translate(-50%, -50%);
+}
+
+/* Style pour le cercle interne du crosshair */
+.tir-precis-lottie-container path.crosshair-inner-circle {
+  fill: red !important;
+}
+
+.cra-logo {
+  width: 200px;
+  height: 250px;
+  transition: all 0.3s ease;
+}
+
+/* Base layers - toujours visibles */
+.arc-base-layer {
+  display: block;
+  stroke: white;
+  stroke-width: 7;
+}
+
+.cible-base-layer {
+  display: block;
+  stroke: white;
+  stroke-width: 7;
+}
+
+.arc-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #685c4d;
+  stroke: white;
+  stroke-width: 7;
+}
+
+.cible-path {
+  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  fill: #685c4d;
+  stroke: white;
+  stroke-width: 7;
+}
+
+/* SVG Layers - Positionnement en superposition */
+.svg-layer {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* Affûtage layer (Arc) - Jaune doré */
+.affutage-layer.active {
+  display: block;
+}
+
+.affutage-layer.active .arc-path {
+  fill: #ffd700;
+  stroke: white;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
+}
+
+/* Précision layer (Cible) - Orange */
+.precision-layer.active {
+  display: block;
+}
+
+.precision-layer.active .cible-path {
+  fill: #ff9800;
+  stroke: white;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 12px rgba(255, 152, 0, 0.6))
+    drop-shadow(0 0 6px rgba(255, 152, 0, 0.3));
+}
+
+/* État inactif */
+.cra-logo.inactive {
+  opacity: 0.4;
+}
+
+.cra-logo.inactive .arc-path,
+.cra-logo.inactive .cible-path {
+  fill: #3a3a3a;
+}
+
+/* Combinaison Affûtage + Précision */
+.cra-logo.has-affutage.has-precision .affutage-layer.active .arc-path {
+  fill: #ffd700;
+}
+
+.cra-logo.has-affutage.has-precision .precision-layer.active .cible-path {
+  fill: #ff9800;
+}
