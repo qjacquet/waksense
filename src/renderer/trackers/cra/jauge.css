@@ -142,17 +142,17 @@ body {
     drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
 }
 
-/* Précision layer (Cible) - Orange */
+/* Précision layer (Cible) - Bleu cyan */
 .precision-layer.active {
   display: block;
 }
 
 .precision-layer.active .cible-path {
-  fill: #ff9800;
+  fill: #00bcd4;
   stroke: white;
   stroke-width: 7;
-  filter: drop-shadow(0 0 12px rgba(255, 152, 0, 0.6))
-    drop-shadow(0 0 6px rgba(255, 152, 0, 0.3));
+  filter: drop-shadow(0 0 12px rgba(0, 188, 212, 0.6))
+    drop-shadow(0 0 6px rgba(0, 188, 212, 0.3));
 }
 
 /* État inactif */
@@ -171,5 +171,5 @@ body {
 }
 
 .cra-logo.has-affutage.has-precision .precision-layer.active .cible-path {
-  fill: #ff9800;
+  fill: #00bcd4;
 }
