@@ -21,9 +21,8 @@ class IopJaugeTracker {
 
   private svgElement: SVGElement | null = null;
   private baseLayer: SVGGElement | null = null;
-  private concentrationLayer: SVGGElement | null = null;
   private courrouxLayer: SVGGElement | null = null;
-  private puissanceLayer: SVGGElement | null = null;
+  private concentrationLayer: SVGGElement | null = null;
   private preparationLayer: SVGGElement | null = null;
   private egareLayer: SVGGElement | null = null;
   private postureContreLayer: SVGGElement | null = null;
@@ -147,11 +146,8 @@ class IopJaugeTracker {
   private initializeSVG(): void {
     this.svgElement = document.querySelector<SVGElement>("#iop-logo-svg");
     this.baseLayer = document.querySelector<SVGGElement>("#base-layer");
-    this.concentrationLayer = document.querySelector<SVGGElement>(
-      "#concentration-layer"
-    );
     this.courrouxLayer = document.querySelector<SVGGElement>("#courroux-layer");
-    this.puissanceLayer = document.querySelector<SVGGElement>("#puissance-layer");
+    this.concentrationLayer = document.querySelector<SVGGElement>("#concentration-layer");
     this.courrouxLottieContainer = document.getElementById("courroux-lottie-container");
     this.preparationLottieContainer = document.getElementById("preparation-lottie-container");
     this.preparationLayer = document.querySelector<SVGGElement>(
@@ -530,9 +526,8 @@ class IopJaugeTracker {
     this.svgElement.classList.remove(...allClasses);
 
     // Masquer toutes les couches d'état
-    this.hideLayer(this.concentrationLayer);
     this.hideLayer(this.courrouxLayer);
-    this.hideLayer(this.puissanceLayer);
+    this.hideLayer(this.concentrationLayer);
     this.hideLayer(this.preparationLayer);
     this.hideLayer(this.egareLayer);
     this.hideLayer(this.postureContreLayer);
@@ -542,15 +537,6 @@ class IopJaugeTracker {
     // Retirer toutes les classes de niveau des couches
     this.removeLayerClasses(this.concentrationLayer, [
       "active",
-      "concentration-low",
-      "concentration-medium",
-      "concentration-high",
-    ]);
-    this.removeLayerClasses(this.puissanceLayer, [
-      "active",
-      "puissance-low",
-      "puissance-medium",
-      "puissance-high",
     ]);
 
     // Si pas en combat, appliquer l'état inactif
@@ -561,31 +547,38 @@ class IopJaugeTracker {
 
     // Appliquer les effets selon les états
 
-    // Concentration
+    // Concentration pleine (bleue)
     if (this.concentration > 0 && this.concentrationLayer) {
-      this.svgElement.classList.add("has-concentration");
-      this.showLayer(this.concentrationLayer);
-      this.concentrationLayer.classList.add("active");
+      const postureSigil1 = this.svgElement.querySelector(
+        ".posture-sigil1"
+      ) as SVGRectElement | null;
+      const postureSigil2 = this.svgElement.querySelector(
+        ".posture-sigil2"
+      ) as SVGRectElement | null;
 
-      // Ajouter la classe basée sur la valeur de concentration
-      if (this.concentration <= 25) {
-        this.concentrationLayer.classList.add("concentration-low");
-      } else if (this.concentration <= 50) {
-        this.concentrationLayer.classList.add("concentration-medium");
-      } else {
-        this.concentrationLayer.classList.add("concentration-high");
+    this.hideLayer(postureSigil1);
+    this.hideLayer(postureSigil2);
+      if (this.concentration >= 80) {
+        this.showLayer(postureSigil1);
+        this.showLayer(postureSigil2);
       }
 
-      // Ajuster dynamiquement l'opacité selon la valeur exacte
-      const concentrationPaths = this.concentrationLayer.querySelectorAll(
-        ".concentration-path"
-      ) as NodeListOf<SVGPathElement>;
-      const normalizedConcentration = this.concentration / 100;
-      
-      concentrationPaths.forEach((path) => {
-        // Ajuster l'opacité selon la valeur (0.4 à 1.0)
-        path.style.opacity = String(0.4 + normalizedConcentration * 0.6);
-      });
+      this.svgElement.classList.add("has-puissance");
+      this.showLayer(this.concentrationLayer);
+      this.concentrationLayer.classList.add("active");
+      const normalizedConcentration = Math.min(this.concentration / 100, 1);
+      this.animateFillTo(normalizedConcentration);
+    } 
+    else if (this.concentrationLayer) {
+      this.hideLayer(this.concentrationLayer);
+      this.concentrationLayer.classList.remove("active");
+      // Stopper l'animation et réinitialiser
+      this.targetFillNormalized = 0;
+      this.currentFillNormalized = 0;
+      if (this.concentrationFillRect) {
+        this.concentrationFillRect.setAttribute("y", "1");
+        this.concentrationFillRect.setAttribute("height", "0");
+      }
     }
 
     // Courroux
@@ -593,7 +586,6 @@ class IopJaugeTracker {
       this.svgElement.classList.add("has-courroux");
       this.showLayer(this.courrouxLayer);
       this.courrouxLayer.classList.add("active");
-      
       // Charger l'animation Lottie
       this.loadCourrouxLottie();
     } else {
@@ -601,80 +593,11 @@ class IopJaugeTracker {
       this.stopCourrouxLottie();
     }
 
-    // Puissance - maintenant utilise l'effet de remplissage de concentration
-    if (this.concentration > 0 && this.puissanceLayer) {
-      this.svgElement.classList.add("has-puissance");
-      this.showLayer(this.puissanceLayer);
-      this.puissanceLayer.classList.add("active");
-
-      // Calculer le pourcentage de remplissage basé sur la concentration (0-100%)
-      const normalizedConcentration = Math.min(this.concentration / 100, 1);
-      // Démarrer/mettre à jour l'animation de remplissage vers la cible
-      this.animateFillTo(normalizedConcentration);
-
-      // Ajuster l'opacité et la couleur selon la concentration
-      const puissancePaths = this.puissanceLayer.querySelectorAll(
-        ".puissance-path"
-      ) as NodeListOf<SVGPathElement>;
-      
-      const effectiveConcentration = this.currentFillNormalized;
-      puissancePaths.forEach((path) => {
-        // Opacité basée sur la concentration (0.6 à 1.0)
-        path.style.opacity = String(0.6 + effectiveConcentration * 0.4);
-
-        const filters: string[] = [];
-
-        // Lueur acier progressive (plus prononcée)
-        if (effectiveConcentration > 0.7) {
-          filters.push(
-            `drop-shadow(0 0 2.5px rgba(140, 160, 180, 0.45))`,
-            `drop-shadow(0 0 5px rgba(140, 160, 180, 0.35))`
-          );
-        } else if (effectiveConcentration > 0.4) {
-          filters.push(`drop-shadow(0 0 2px rgba(140, 160, 180, 0.35))`);
-        }
-
-        // Relief (biseau) avec ombres superposées, croît avec la concentration
-        const baseShadowAlpha = 0.15 + 0.25 * effectiveConcentration; // 0.15 -> 0.40
-        const highlightAlpha = 0.05 + 0.15 * effectiveConcentration; // 0.05 -> 0.20
-        filters.push(
-          `drop-shadow(0 1px 1px rgba(0, 0, 0, ${baseShadowAlpha.toFixed(3)}))`,
-          `drop-shadow(0 -1px 1px rgba(255, 255, 255, ${highlightAlpha.toFixed(3)}))`
-        );
-
-        // Éclat spéculaire à partir de 90%, plus marqué
-        if (effectiveConcentration >= 0.9) {
-          const t = (effectiveConcentration - 0.9) / 0.1; // 0..1
-          const glowSize = 3 + 9 * t; // 3px -> 12px
-          const glowAlpha = 0.15 + 0.35 * t; // 0.15 -> 0.50
-          const streakAlpha = 0.10 + 0.25 * t; // 0.10 -> 0.35
-          filters.push(
-            `drop-shadow(0 0 ${glowSize.toFixed(1)}px rgba(255, 255, 255, ${glowAlpha.toFixed(3)}))`,
-            // léger streak vers le haut pour simuler un reflet
-            `drop-shadow(0 -2px ${(2 + 4 * t).toFixed(1)}px rgba(255, 255, 255, ${streakAlpha.toFixed(3)}))`
-          );
-        }
-
-        path.style.filter = filters.join(" ") || "none";
-      });
-    } else if (this.puissanceLayer) {
-      // Cacher le layer si pas de concentration
-      this.hideLayer(this.puissanceLayer);
-      this.puissanceLayer.classList.remove("active");
-      // Stopper l'animation et réinitialiser
-      this.targetFillNormalized = 0;
-      this.currentFillNormalized = 0;
-      if (this.concentrationFillRect) {
-        this.concentrationFillRect.setAttribute("height", "0");
-      }
-    }
-
     // Préparation
     if (this.preparation && this.preparationLayer) {
       this.svgElement.classList.add("has-preparation");
       this.showLayer(this.preparationLayer);
       this.preparationLayer.classList.add("active");
-      
       // Charger l'animation Lottie
       this.loadPreparationLottie();
     } else {
@@ -688,7 +611,7 @@ class IopJaugeTracker {
       this.showLayer(this.egareLayer);
       this.egareLayer.classList.add("active");
     }
-    
+
     // Mettre à jour la vitesse des animations Lottie selon l'état Égaré
     this.updateLottieSpeed();
 

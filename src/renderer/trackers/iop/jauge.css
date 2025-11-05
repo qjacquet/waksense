@@ -25,7 +25,6 @@ body {
   align-items: center;
   justify-content: center;
   background: transparent;
-  /* Permettre le déplacement de la fenêtre */
   -webkit-app-region: drag;
 }
 
@@ -38,38 +37,30 @@ body {
   width: 250px;
   height: 250px;
   pointer-events: none;
-  z-index: 10;
-  opacity: 0.6;
-  /* Changer la couleur de bleu à rouge avec hue-rotate */
-  /* Le bleu est à ~240°, le rouge à 0°, donc on fait -240° (ou +120°) */
-  filter: hue-rotate(120deg) saturate(1.2);
 }
 
 /* Ajustements spécifiques pour l'animation de Courroux */
 #courroux-lottie-container {
-  /* Remonter légèrement l'animation */
-  top: 48%;
-  /* Teinte plus chaude (rouge/orange) */
-  filter: hue-rotate(150deg) saturate(1.8) brightness(1.05);
+  top: 47%;
+  height: 180px;
+  opacity: 0.8;
+  filter: hue-rotate(120deg) saturate(1.2);
 }
 
 /* Conteneur Lottie spécifique pour préparation (éclairs) */
 .preparation-lottie-container {
-  /* Pas besoin de changer la couleur, les éclairs sont déjà néon */
   filter: none;
+   z-index: 10;
   opacity: 0.8;
-  /* Ajuster la hauteur et la position pour éviter la duplication */
-  height: 200px;
-  width: 200px;
-  left: 55%;
+  width: 150px;
   overflow: hidden;
+  margin-left: 20px;
 }
 
 .iop-logo {
   width: 200px;
   height: 200px;
   transition: all 0.3s ease;
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
 }
 
 /* Base layer - toujours visible */
@@ -79,122 +70,25 @@ body {
 
 .base-path {
   transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: rgba(20, 20, 20, 0.9);
+  fill: #685c4d;
+  stroke: #685c4d;
+  stroke-width: 2;
 }
-
 
 /* SVG Layers - Positionnement en superposition */
 .svg-layer {
   transition: opacity 0.3s ease, filter 0.3s ease;
-  mix-blend-mode: screen;
 }
 
-/* Concentration layer - Bleu */
 .concentration-layer {
-  mix-blend-mode: screen;
-}
-
-.concentration-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-.concentration-layer.active {
-  display: block;
-}
-
-.concentration-layer.active.concentration-low .concentration-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-.concentration-layer.active.concentration-medium .concentration-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-.concentration-layer.active.concentration-high .concentration-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-/* Courroux layer - Rouge/Orange */
-.courroux-layer {
-  mix-blend-mode: screen;
-}
-
-.courroux-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-.courroux-layer.active {
-  display: block;
-}
-
-.courroux-layer.active .courroux-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-/* Les flammes et particules ont été remplacées par Lottie */
-
-/* Puissance layer - Remplissage de concentration (bleu) */
-.puissance-layer {
-  mix-blend-mode: screen;
-}
-
-.puissance-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  /* Teinte acier discrète pour la lame */
-  fill: #7f8ea3;
-  filter: none;
-}
-
-.puissance-layer.active {
-  display: block;
-}
-
-/* Préparation layer - Vert */
-.preparation-layer {
-  mix-blend-mode: screen;
-}
-
-.preparation-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-.preparation-layer.active {
-  display: block;
-}
-
-.preparation-layer.active .preparation-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-/* Égaré layer - Rouge/Orange */
-.egare-layer {
-  mix-blend-mode: screen;
-}
-
-.egare-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-    fill: rgba(20, 20, 20, 0.9);
-}
-
-.egare-layer.active {
-  display: block;
-}
-
-.egare-layer.active .egare-path {
-  fill: rgba(20, 20, 20, 0.9);
-}
-
-/* Posture layers */
-.posture-layer {
-  mix-blend-mode: screen;
-}
-
-.posture-path {
-  transition: fill 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-  fill: rgba(20, 20, 20, 0.9);
+  path {
+    fill: #685c4d;
+    stroke:white;
+    stroke-width: 7;
+  }
+  .posture-sigil1, .posture-sigil2 {
+    display: none;
+  }
 }
 
 .posture-contre-layer.active {
@@ -204,8 +98,10 @@ body {
     drop-shadow(0 0 9px rgba(244, 67, 54, 0.4));
 }
 
-.posture-contre-layer.active .posture-path {
-  fill: #f44336; /* Rouge */
+.posture-contre-layer.active path {
+  fill: #f44336; 
+  stroke:white;
+  stroke-width: 7;
 }
 
 .posture-défense-layer.active {
@@ -215,8 +111,10 @@ body {
     drop-shadow(0 0 9px rgba(76, 175, 80, 0.4));
 }
 
-.posture-défense-layer.active .posture-path {
-  fill: #4caf50; /* Vert */
+.posture-défense-layer.active path {
+  fill: #4caf50;
+  stroke:white;
+  stroke-width: 7;
 }
 
 .posture-vivacité-layer.active {
@@ -226,6 +124,8 @@ body {
     drop-shadow(0 0 9px rgba(156, 39, 176, 0.4));
 }
 
-.posture-vivacité-layer.active .posture-path {
-  fill: #9c27b0; /* Violet */
+.posture-vivacité-layer.active path {
+  fill: #9c27b0;
+  stroke:white;
+  stroke-width: 7;
 }
