@@ -540,6 +540,17 @@ class CraJaugeTracker {
     if (this.tirPrecisLottieAnimation) {
       this.tirPrecisLottieContainer.style.display = "block";
       
+      // Vérifier si l'animation est déjà à l'état actif (50%)
+      const totalFrames = this.tirPrecisLottieAnimation.totalFrames;
+      const halfFrame = Math.floor(totalFrames * 0.5);
+      const currentFrame = this.tirPrecisLottieAnimation.currentFrame;
+      
+      // Si l'animation est déjà à 50% ou proche, ne pas la relancer
+      if (Math.abs(currentFrame - halfFrame) <= 2) {
+        // L'animation est déjà à l'état actif, ne rien faire
+        return;
+      }
+      
       // Retirer tous les handlers existants
       if (this.tirPrecisRollbackHandler) {
         this.tirPrecisLottieAnimation.removeEventListener('enterFrame', this.tirPrecisRollbackHandler);
@@ -551,9 +562,6 @@ class CraJaugeTracker {
       this.tirPrecisLottieAnimation.setSpeed(1.5);
       
       // Créer le handler pour arrêter à 50%
-      const totalFrames = this.tirPrecisLottieAnimation.totalFrames;
-      const halfFrame = Math.floor(totalFrames * 0.5);
-      
       const forwardCompleteHandler = () => {
         if (!this.tirPrecisLottieAnimation) return;
         
