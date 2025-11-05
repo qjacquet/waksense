@@ -62,6 +62,7 @@ body {
   border-radius: 9px;
   transition: width 0.3s ease;
   z-index: 1;
+  position: relative;
 }
 
 .rage-bar .bar-fill {
@@ -84,6 +85,18 @@ body {
 .rage-bar .bar-fill.ougarou-active {
   background: linear-gradient(90deg, #b40000 0%, #ff3c3c 50%, #ff6464 100%);
   animation: ougarou-pulse 1.5s ease-in-out infinite;
+}
+
+.rage-bar .bar-fill.ougarou-active .rage-gif-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+  z-index: -1;
+  border-radius: 9px;
 }
 
 .tracker-container.ougarou-mode {
@@ -131,6 +144,7 @@ body {
   justify-content: center;
   font-size: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
 }
 
 .timeline-cost {
@@ -161,4 +175,3 @@ body {
 .timeline-cost.cost-pw {
   color: #00ced1;
 }
-
