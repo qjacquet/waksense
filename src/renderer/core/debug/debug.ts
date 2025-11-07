@@ -107,6 +107,22 @@ class DebugUI {
         ],
       },
       {
+        id: "pointeAffuteeStacks",
+        label: "Pointe Affûtée",
+        type: "slider",
+        min: 0,
+        max: 3,
+        default: 0,
+      },
+      {
+        id: "baliseAffuteeStacks",
+        label: "Balise Affûtée",
+        type: "slider",
+        min: 0,
+        max: 3,
+        default: 0,
+      },
+      {
         id: "tirPrecisActive",
         label: "Tir Précis Actif",
         type: "checkbox",

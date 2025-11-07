@@ -173,3 +173,78 @@ body {
 .cra-logo.has-affutage.has-precision .precision-layer.active .cible-path {
   fill: #00bcd4;
 }
+
+/* Compteurs de stacks */
+.stack-counter {
+  transition: opacity 0.3s ease;
+}
+
+/* Style pour les bâtons de balises affûtées (bas gauche) - style arrondi/balise */
+.balise-counter .stack-bar {
+  fill: #00bcd4;
+  stroke: white;
+  stroke-width: 0.4;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.balise-counter .stack-bar-dot {
+  fill: white;
+  transition: opacity 0.3s ease;
+}
+
+.balise-counter .stack-bar.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(0, 188, 212, 0.8))
+    drop-shadow(0 0 2px rgba(0, 188, 212, 0.5));
+}
+
+.balise-counter .stack-bar-dot.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+/* Style pour les bâtons de pointes affûtées (bas droite) - style pointu/flèche */
+.pointe-counter .stack-bar {
+  fill: #ffd700;
+  stroke: white;
+  stroke-width: 0.4;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.pointe-counter .stack-bar-line {
+  stroke: white;
+  stroke-width: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.pointe-counter .stack-bar.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8))
+    drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+}
+
+.pointe-counter .stack-bar-line.active {
+  opacity: 1;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+/* Texte pourcentage des jauges */
+.jauge-percent {
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8),
+               -1px -1px 2px rgba(0, 0, 0, 0.8),
+               1px -1px 2px rgba(0, 0, 0, 0.8),
+               -1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.affutage-percent {
+  fill: #ffd700;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
+}
+
+.precision-percent {
+  fill: #00bcd4;
+  filter: drop-shadow(0 0 4px rgba(0, 188, 212, 0.8));
+}

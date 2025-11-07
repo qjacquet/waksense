@@ -128,6 +128,50 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
           </g>
         </g>
       </g>
+      
+      <!-- Texte valeur Affûtage -->
+      <text id="affutage-percent" class="jauge-percent affutage-percent" x="36.5" y="25" text-anchor="middle" font-size="8" fill="white" opacity="0" font-weight="bold">0</text>
+      
+      <!-- Texte valeur Précision -->
+      <text id="precision-percent" class="jauge-percent precision-percent" x="36.5" y="50" text-anchor="middle" font-size="8" fill="white" opacity="0" font-weight="bold">0</text>
+      
+      <!-- Compteur Balises affûtées (bas gauche) - style arrondi/balise -->
+      <g id="balise-counter" class="stack-counter balise-counter" transform="translate(15, 68) rotate(-45 1.75 7.5)">
+        <!-- Bâton 1 -->
+        <g transform="rotate(42 1.75 2.25)">
+          <rect class="stack-bar" x="0" y="0" width="3.5" height="4.5" rx="1.5" ry="1.5" opacity="0.3" />
+          <circle class="stack-bar-dot" cx="1.75" cy="1.5" r="0.8" opacity="0.3" />
+        </g>
+        <!-- Bâton 2 -->
+        <g transform="rotate(42 1.75 7.75)">
+          <rect class="stack-bar" x="0" y="5.5" width="3.5" height="4.5" rx="1.5" ry="1.5" opacity="0.3" />
+          <circle class="stack-bar-dot" cx="1.75" cy="7" r="0.8" opacity="0.3" />
+        </g>
+        <!-- Bâton 3 -->
+        <g transform="rotate(42 1.75 13.25)">
+          <rect class="stack-bar" x="0" y="11" width="3.5" height="4.5" rx="1.5" ry="1.5" opacity="0.3" />
+          <circle class="stack-bar-dot" cx="1.75" cy="12.5" r="0.8" opacity="0.3" />
+        </g>
+      </g>
+      
+      <!-- Compteur Pointes affûtées (bas droite) - style pointu/flèche -->
+      <g id="pointe-counter" class="stack-counter pointe-counter" transform="translate(55, 68) rotate(45 1.75 7.5)">
+        <!-- Bâton 1 -->
+        <g transform="rotate(135 1.75 2.25)">
+          <polygon class="stack-bar" points="1.75,0 3.5,4.5 0,4.5" opacity="0.3" />
+          <line class="stack-bar-line" x1="1.75" y1="0" x2="1.75" y2="4.5" opacity="0.3" />
+        </g>
+        <!-- Bâton 2 -->
+        <g transform="rotate(135 1.75 7.75)">
+          <polygon class="stack-bar" points="1.75,5.5 3.5,10 0,10" opacity="0.3" />
+          <line class="stack-bar-line" x1="1.75" y1="5.5" x2="1.75" y2="10" opacity="0.3" />
+        </g>
+        <!-- Bâton 3 -->
+        <g transform="rotate(135 1.75 13.25)">
+          <polygon class="stack-bar" points="1.75,11 3.5,15.5 0,15.5" opacity="0.3" />
+          <line class="stack-bar-line" x1="1.75" y1="11" x2="1.75" y2="15.5" opacity="0.3" />
+        </g>
+      </g>
     </svg>
     <!-- Conteneur pour l'animation Lottie de Tir précis -->
     <div id="tir-precis-lottie-container" class="lottie-container tir-precis-lottie-container" style="display: none;"></div>

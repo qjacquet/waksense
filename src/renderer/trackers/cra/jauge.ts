@@ -23,6 +23,10 @@ class CraJaugeTracker {
   private cibleBaseLayer: SVGGElement | null = null;
   private affutageLayer: SVGGElement | null = null;
   private precisionLayer: SVGGElement | null = null;
+  private baliseCounter: SVGGElement | null = null;
+  private pointeCounter: SVGGElement | null = null;
+  private affutagePercentText: SVGTextElement | null = null;
+  private precisionPercentText: SVGTextElement | null = null;
 
   private tirPrecisLottieContainer: HTMLElement | null = null;
   private tirPrecisLottieAnimation: any = null;
@@ -68,6 +72,14 @@ class CraJaugeTracker {
           String(this.currentAffutageFillNormalized)
         );
       }
+      // Mettre à jour la valeur pendant l'animation
+      if (this.affutagePercentText) {
+        const currentAffutageValue = Math.round(this.currentAffutageFillNormalized * 100);
+        this.affutagePercentText.textContent = `${currentAffutageValue}`;
+        if (currentAffutageValue > 0) {
+          this.affutagePercentText.setAttribute("opacity", "1");
+        }
+      }
       if (this.currentAffutageFillNormalized !== this.targetAffutageFillNormalized) {
         this.affutageFillAnimationFrame = requestAnimationFrame(step);
       } else {
@@ -107,6 +119,14 @@ class CraJaugeTracker {
           String(this.currentPrecisionFillNormalized)
         );
       }
+      // Mettre à jour la valeur pendant l'animation
+      if (this.precisionPercentText) {
+        const currentPrecisionValue = Math.round(this.currentPrecisionFillNormalized * this.precisionMax);
+        this.precisionPercentText.textContent = `${currentPrecisionValue}`;
+        if (currentPrecisionValue > 0) {
+          this.precisionPercentText.setAttribute("opacity", "1");
+        }
+      }
       if (this.currentPrecisionFillNormalized !== this.targetPrecisionFillNormalized) {
         this.precisionFillAnimationFrame = requestAnimationFrame(step);
       } else {
@@ -138,6 +158,10 @@ class CraJaugeTracker {
     this.cibleBaseLayer = document.querySelector<SVGGElement>("#cible-base-layer");
     this.affutageLayer = document.querySelector<SVGGElement>("#affutage-layer");
     this.precisionLayer = document.querySelector<SVGGElement>("#precision-layer");
+    this.baliseCounter = document.querySelector<SVGGElement>("#balise-counter");
+    this.pointeCounter = document.querySelector<SVGGElement>("#pointe-counter");
+    this.affutagePercentText = document.querySelector<SVGTextElement>("#affutage-percent");
+    this.precisionPercentText = document.querySelector<SVGTextElement>("#precision-percent");
     this.tirPrecisLottieContainer = document.getElementById("tir-precis-lottie-container");
 
     if (!this.svgElement) {
@@ -402,6 +426,10 @@ class CraJaugeTracker {
         if (values.tirPrecisActive !== undefined) {
           this.tirPrecisActive = Boolean(values.tirPrecisActive);
         }
+        if (values.baliseAffuteeStacks !== undefined)
+          this.baliseAffuteeStacks = Number(values.baliseAffuteeStacks);
+        if (values.pointeAffuteeStacks !== undefined)
+          this.pointeAffuteeStacks = Number(values.pointeAffuteeStacks);
         this.updateUI();
       } else if (event.data.type === "debug-update") {
         // Mettre à jour une valeur spécifique
@@ -418,6 +446,12 @@ class CraJaugeTracker {
             break;
           case "tirPrecisActive":
             this.tirPrecisActive = Boolean(value);
+            break;
+          case "baliseAffuteeStacks":
+            this.baliseAffuteeStacks = Number(value);
+            break;
+          case "pointeAffuteeStacks":
+            this.pointeAffuteeStacks = Number(value);
             break;
         }
         this.updateUI();
@@ -455,6 +489,11 @@ class CraJaugeTracker {
       this.affutageLayer.classList.add("active");
       const normalizedAffutage = Math.min(this.affutage / 100, 1);
       this.animateAffutageFillTo(normalizedAffutage);
+      // Afficher la valeur
+      if (this.affutagePercentText) {
+        this.affutagePercentText.textContent = `${this.affutage}`;
+        this.affutagePercentText.setAttribute("opacity", "1");
+      }
     } else if (this.affutageLayer) {
       this.hideLayer(this.affutageLayer);
       this.affutageLayer.classList.remove("active");
@@ -465,6 +504,10 @@ class CraJaugeTracker {
         this.affutageFillRect.setAttribute("y", "0");
         this.affutageFillRect.setAttribute("height", "0");
       }
+      // Masquer le pourcentage
+      if (this.affutagePercentText) {
+        this.affutagePercentText.setAttribute("opacity", "0");
+      }
     }
 
     // Précision (Cible)
@@ -474,6 +517,11 @@ class CraJaugeTracker {
       this.precisionLayer.classList.add("active");
       const normalizedPrecision = Math.min(this.precision / this.precisionMax, 1);
       this.animatePrecisionFillTo(normalizedPrecision);
+      // Afficher la valeur
+      if (this.precisionPercentText) {
+        this.precisionPercentText.textContent = `${this.precision}`;
+        this.precisionPercentText.setAttribute("opacity", "1");
+      }
     } else if (this.precisionLayer) {
       this.hideLayer(this.precisionLayer);
       this.precisionLayer.classList.remove("active");
@@ -483,6 +531,10 @@ class CraJaugeTracker {
       if (this.precisionFillRect) {
         this.precisionFillRect.setAttribute("y", "0");
         this.precisionFillRect.setAttribute("height", "0");
+      }
+      // Masquer le pourcentage
+      if (this.precisionPercentText) {
+        this.precisionPercentText.setAttribute("opacity", "0");
       }
     }
 
@@ -494,6 +546,59 @@ class CraJaugeTracker {
     } else {
       // Arrêter et cacher l'animation Lottie
       this.stopTirPrecisLottie();
+    }
+
+    // Mettre à jour les compteurs de stacks
+    this.updateStackCounters();
+  }
+
+  private updateStackCounters(): void {
+    // Mettre à jour le compteur de balises affûtées (bas gauche)
+    if (this.baliseCounter) {
+      const bars = this.baliseCounter.querySelectorAll<SVGRectElement>(".stack-bar");
+      const dots = this.baliseCounter.querySelectorAll<SVGCircleElement>(".stack-bar-dot");
+      bars.forEach((bar, index) => {
+        if (index < this.baliseAffuteeStacks) {
+          bar.classList.add("active");
+          bar.setAttribute("opacity", "1");
+        } else {
+          bar.classList.remove("active");
+          bar.setAttribute("opacity", "0.3");
+        }
+      });
+      dots.forEach((dot, index) => {
+        if (index < this.baliseAffuteeStacks) {
+          dot.classList.add("active");
+          dot.setAttribute("opacity", "1");
+        } else {
+          dot.classList.remove("active");
+          dot.setAttribute("opacity", "0.3");
+        }
+      });
+    }
+
+    // Mettre à jour le compteur de pointes affûtées (bas droite)
+    if (this.pointeCounter) {
+      const bars = this.pointeCounter.querySelectorAll<SVGPolygonElement>(".stack-bar");
+      const lines = this.pointeCounter.querySelectorAll<SVGLineElement>(".stack-bar-line");
+      bars.forEach((bar, index) => {
+        if (index < this.pointeAffuteeStacks) {
+          bar.classList.add("active");
+          bar.setAttribute("opacity", "1");
+        } else {
+          bar.classList.remove("active");
+          bar.setAttribute("opacity", "0.3");
+        }
+      });
+      lines.forEach((line, index) => {
+        if (index < this.pointeAffuteeStacks) {
+          line.classList.add("active");
+          line.setAttribute("opacity", "1");
+        } else {
+          line.classList.remove("active");
+          line.setAttribute("opacity", "0.3");
+        }
+      });
     }
   }
 
