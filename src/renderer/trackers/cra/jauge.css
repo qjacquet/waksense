@@ -129,30 +129,30 @@ body {
   transition: opacity 0.3s ease, filter 0.3s ease;
 }
 
-/* Affûtage layer (Arc) - Jaune doré */
+/* Affûtage layer (Arc) - Bleu cyan */
 .affutage-layer.active {
   display: block;
 }
 
 .affutage-layer.active .arc-path {
-  fill: #ffd700;
-  stroke: white;
-  stroke-width: 7;
-  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))
-    drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
-}
-
-/* Précision layer (Cible) - Bleu cyan */
-.precision-layer.active {
-  display: block;
-}
-
-.precision-layer.active .cible-path {
   fill: #00bcd4;
   stroke: white;
   stroke-width: 7;
   filter: drop-shadow(0 0 12px rgba(0, 188, 212, 0.6))
     drop-shadow(0 0 6px rgba(0, 188, 212, 0.3));
+}
+
+/* Précision layer (Cible) - Jaune doré */
+.precision-layer.active {
+  display: block;
+}
+
+.precision-layer.active .cible-path {
+  fill: #ffd700;
+  stroke: white;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6))
+    drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
 }
 
 /* État inactif */
@@ -167,11 +167,11 @@ body {
 
 /* Combinaison Affûtage + Précision */
 .cra-logo.has-affutage.has-precision .affutage-layer.active .arc-path {
-  fill: #ffd700;
+  fill: #00bcd4;
 }
 
 .cra-logo.has-affutage.has-precision .precision-layer.active .cible-path {
-  fill: #00bcd4;
+  fill: #ffd700;
 }
 
 /* Compteurs de stacks */
@@ -205,7 +205,7 @@ body {
 
 /* Style pour les bâtons de pointes affûtées (bas droite) - style pointu/flèche */
 .pointe-counter .stack-bar {
-  fill: #ffd700;
+  fill: #00bcd4;
   stroke: white;
   stroke-width: 0.4;
   transition: opacity 0.3s ease, filter 0.3s ease;
@@ -219,8 +219,8 @@ body {
 
 .pointe-counter .stack-bar.active {
   opacity: 1;
-  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8))
-    drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+  filter: drop-shadow(0 0 4px rgba(0, 188, 212, 0.8))
+    drop-shadow(0 0 2px rgba(0, 188, 212, 0.5));
 }
 
 .pointe-counter .stack-bar-line.active {
@@ -240,11 +240,67 @@ body {
 }
 
 .affutage-percent {
+  fill: #00bcd4;
+  filter: drop-shadow(0 0 4px rgba(0, 188, 212, 0.8));
+}
+
+.precision-percent {
   fill: #ffd700;
   filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
 }
 
-.precision-percent {
-  fill: #00bcd4;
-  filter: drop-shadow(0 0 4px rgba(0, 188, 212, 0.8));
+/* Style pour les flèches lumineuses (haut centre) */
+.fleche-lumineuse-counter {
+  transition: opacity 0.3s ease;
+}
+
+.fleche-lumineuse-counter .arrow-body {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.fleche-lumineuse-counter .arrow-tip {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.fleche-lumineuse-counter .arrow-line {
+  transition: opacity 0.3s ease;
+}
+
+.fleche-lumineuse-counter .arrow-ray {
+  transition: opacity 0.3s ease;
+}
+
+.fleche-lumineuse-counter .stack-arrow.active .arrow-body {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 2px rgba(255, 215, 0, 0.6));
+}
+
+.fleche-lumineuse-counter .stack-arrow.active .arrow-tip {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 2px rgba(255, 215, 0, 0.6));
+}
+
+.fleche-lumineuse-counter .stack-arrow.active .arrow-line {
+  opacity: 1;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+.fleche-lumineuse-counter .stack-arrow.active .arrow-ray {
+  opacity: 0.8;
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.8));
+}
+
+/* Colorer la pointe de la flèche de l'arc en doré quand des flèches lumineuses sont disponibles */
+.cra-logo.has-fleche-lumineuse .arc-tip {
+  fill: #ffd700 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+}
+
+.cra-logo.has-fleche-lumineuse .affutage-layer.active .arc-tip-fill {
+  fill: #ffd700 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9))
+    drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
 }

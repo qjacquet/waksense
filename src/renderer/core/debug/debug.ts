@@ -73,6 +73,14 @@ class DebugUI {
         default: 0,
       },
       {
+        id: "flecheLumineuseStacks",
+        label: "Flèche Lumineuse",
+        type: "slider",
+        min: 0,
+        max: 5,
+        default: 0,
+      },
+      {
         id: "tirPrecisActive",
         label: "Tir Précis Actif",
         type: "checkbox",
@@ -120,6 +128,14 @@ class DebugUI {
         type: "slider",
         min: 0,
         max: 3,
+        default: 0,
+      },
+      {
+        id: "flecheLumineuseStacks",
+        label: "Flèche Lumineuse",
+        type: "slider",
+        min: 0,
+        max: 5,
         default: 0,
       },
       {

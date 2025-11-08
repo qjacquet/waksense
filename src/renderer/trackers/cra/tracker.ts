@@ -13,6 +13,8 @@ class CraTracker {
   private precision: number = 0;
   private pointeAffuteeStacks: number = 0;
   private baliseAffuteeStacks: number = 0;
+  private flecheLumineuseStacks: number = 0;
+  private trackedPlayerName: string | null = null;
   private tirPrecisActive: boolean = false;
   private hasEspritAffute: boolean = false;
   private precisionMax: number = 300;
@@ -40,6 +42,7 @@ class CraTracker {
     const precisionIcon = document.getElementById("precision-icon");
     const pointeIcon = document.getElementById("pointe-icon");
     const baliseIcon = document.getElementById("balise-icon");
+    const flecheLumineuseIcon = document.getElementById("fleche-lumineuse-icon");
     const tirPrecisIcon = document.getElementById("tir-precis-icon");
 
     if (affutageIcon) {
@@ -57,6 +60,10 @@ class CraTracker {
     if (baliseIcon) {
       (baliseIcon as HTMLImageElement).src =
         "../../../assets/classes/cra/balise.png";
+    }
+    if (flecheLumineuseIcon) {
+      (flecheLumineuseIcon as HTMLImageElement).src =
+        "../../../assets/classes/cra/Flèche lumineuse.png";
     }
     if (tirPrecisIcon) {
       (tirPrecisIcon as HTMLImageElement).src =
@@ -101,6 +108,9 @@ class CraTracker {
 
     // Parse Balise affûtée consumption
     this.parseBaliseAffutee(line);
+
+    // Parse Flèche lumineuse
+    this.parseFlecheLumineuse(line, parsed);
 
     // Parse Tir précis buff
     this.parseTirPrecis(line);
@@ -226,6 +236,45 @@ class CraTracker {
     }
   }
 
+  private parseFlecheLumineuse(line: string, parsed: any): void {
+    // Détecter le nom du personnage suivi depuis les messages de combat
+    if (parsed.isSpellCast && parsed.spellCast) {
+      const playerName = parsed.spellCast.playerName;
+      const spellName = parsed.spellCast.spellName;
+
+      // Stocker le nom du personnage si on détecte un sort de Cra
+      if (spellName && !this.trackedPlayerName) {
+        // Détecter si c'est un sort de Cra pour identifier le personnage
+        const craSpells = [
+          "Flèche", "Balise", "Tir", "Arc", "Cible"
+        ];
+        if (craSpells.some(spell => spellName.includes(spell))) {
+          this.trackedPlayerName = playerName;
+        }
+      }
+
+      // Vérifier si c'est "Flèche lumineuse"
+      if (spellName && spellName.includes("Flèche lumineuse")) {
+        // Vérifier si c'est notre personnage
+        if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
+          // Chercher "+x niv" dans la ligne
+          const incrementMatch = line.match(/Flèche lumineuse.*?\(\+(\d+)\s*Niv\.\)/i);
+          if (incrementMatch) {
+            const increment = parseInt(incrementMatch[1], 10);
+            this.flecheLumineuseStacks = Math.min(5, this.flecheLumineuseStacks + increment);
+            this.updateUI();
+          } else {
+            // Pas de "+x niv", c'est un décrément
+            if (this.flecheLumineuseStacks > 0) {
+              this.flecheLumineuseStacks--;
+              this.updateUI();
+            }
+          }
+        }
+      }
+    }
+  }
+
   private parseTirPrecis(line: string): void {
     // Parse Tir précis buff activation
     if (line.includes("Tir précis (Niv.")) {
@@ -323,6 +372,8 @@ class CraTracker {
           this.pointeAffuteeStacks = Number(values.pointeAffuteeStacks);
         if (values.baliseAffuteeStacks !== undefined)
           this.baliseAffuteeStacks = Number(values.baliseAffuteeStacks);
+        if (values.flecheLumineuseStacks !== undefined)
+          this.flecheLumineuseStacks = Number(values.flecheLumineuseStacks);
         if (values.tirPrecisActive !== undefined)
           this.tirPrecisActive = Boolean(values.tirPrecisActive);
         this.updateUI();
@@ -344,6 +395,9 @@ class CraTracker {
             break;
           case "baliseAffuteeStacks":
             this.baliseAffuteeStacks = Number(value);
+            break;
+          case "flecheLumineuseStacks":
+            this.flecheLumineuseStacks = Number(value);
             break;
           case "tirPrecisActive":
             this.tirPrecisActive = Boolean(value);
@@ -379,6 +433,12 @@ class CraTracker {
       this.baliseAffuteeStacks,
       3,
       "Balise"
+    );
+    updateStackIndicator(
+      "fleche-lumineuse-stacks",
+      Math.min(this.flecheLumineuseStacks, 5),
+      5,
+      "Flèche"
     );
     const tirPrecisIndicator = document.getElementById("tir-precis-indicator");
     if (tirPrecisIndicator) {

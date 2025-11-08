@@ -26,7 +26,7 @@
       <g transform="translate(0.000000,92.000000) scale(0.100000,-0.100000)">
         <!-- ARC (Affûtage) - Base layer -->
         <g id="arc-base-layer" class="svg-layer arc-base-layer">
-          <path class="arc-path" stroke="none" opacity="0.8" d="M361 814 c0 -11 3 -14 6 -6 3 7 2 16 -1 19 -3 4 -6 -2 -5 -13z"/>
+          <path class="arc-path arc-tip" stroke="none" opacity="0.8" d="M361 814 c0 -11 3 -14 6 -6 3 7 2 16 -1 19 -3 4 -6 -2 -5 -13z"/>
           <path class="arc-path" stroke="none" opacity="0.8" d="M371 748 c-1 -27 -5 -48 -10 -48 -6 0 -7 -16 -4 -35 5 -34 5 -35 -28
 -35 -36 0 -111 -30 -145 -58 -11 -9 -4 -1 17 18 24 23 40 50 47 80 13 51 9 62
 -9 28 -6 -12 -35 -48 -62 -78 -70 -77 -98 -143 -104 -243 -3 -46 0 -93 5 -107
@@ -37,7 +37,7 @@
 36 8 44 31 32 17 -10 17 -9 0 32 -10 24 -21 50 -24 58 -3 8 -6 -6 -6 -32z
 m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
 -5 -2 -10 -4 -10 -3 0 -8 5 -11 10 -3 6 -1 10 4 10 6 0 11 -4 11 -10z"/>
-          <path class="arc-path" stroke="none" opacity="0.8" d="M329 726 c-16 -46 -12 -59 10 -32 7 8 11 29 9 46 -3 31 -3 31 -19
+          <path class="arc-path arc-tip" stroke="none" opacity="0.8" d="M329 726 c-16 -46 -12 -59 10 -32 7 8 11 29 9 46 -3 31 -3 31 -19
 -14z"/>
           <path class="arc-path" stroke="none" opacity="0.8" d="M474 708 c3 -9 8 -32 11 -51 4 -22 18 -43 36 -56 16 -12 28 -27 26
 -33 -1 -7 5 -12 13 -13 16 -1 16 -7 4 -39 -5 -14 -3 -17 7 -14 8 3 14 10 14
@@ -57,9 +57,8 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
 
         <!-- ARC (Affûtage) - Fill layer -->
         <g id="affutage-layer" class="svg-layer affutage-layer" style="display: none;">
-          <g clip-path="url(#affutage-fill-clip)">
-            <path class="arc-path" stroke="none" opacity="0.9" d="M361 814 c0 -11 3 -14 6 -6 3 7 2 16 -1 19 -3 4 -6 -2 -5 -13z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M371 748 c-1 -27 -5 -48 -10 -48 -6 0 -7 -16 -4 -35 5 -34 5 -35 -28
+          <path class="arc-path affutage-fill-path arc-tip-fill" stroke="none" opacity="0" d="M361 814 c0 -11 3 -14 6 -6 3 7 2 16 -1 19 -3 4 -6 -2 -5 -13z"/>
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M371 748 c-1 -27 -5 -48 -10 -48 -6 0 -7 -16 -4 -35 5 -34 5 -35 -28
 -35 -36 0 -111 -30 -145 -58 -11 -9 -4 -1 17 18 24 23 40 50 47 80 13 51 9 62
 -9 28 -6 -12 -35 -48 -62 -78 -70 -77 -98 -143 -104 -243 -3 -46 0 -93 5 -107
 9 -21 11 -14 11 41 1 55 7 78 32 125 17 34 28 67 25 79 -5 20 -5 20 11 0 15
@@ -69,23 +68,22 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
 36 8 44 31 32 17 -10 17 -9 0 32 -10 24 -21 50 -24 58 -3 8 -6 -6 -6 -32z
 m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
 -5 -2 -10 -4 -10 -3 0 -8 5 -11 10 -3 6 -1 10 4 10 6 0 11 -4 11 -10z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M329 726 c-16 -46 -12 -59 10 -32 7 8 11 29 9 46 -3 31 -3 31 -19
+          <path class="arc-path affutage-fill-path arc-tip-fill" stroke="none" opacity="0" d="M329 726 c-16 -46 -12 -59 10 -32 7 8 11 29 9 46 -3 31 -3 31 -19
 -14z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M474 708 c3 -9 8 -32 11 -51 4 -22 18 -43 36 -56 16 -12 28 -27 26
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M474 708 c3 -9 8 -32 11 -51 4 -22 18 -43 36 -56 16 -12 28 -27 26
 -33 -1 -7 5 -12 13 -13 16 -1 16 -7 4 -39 -5 -14 -3 -17 7 -14 8 3 14 10 14
 16 0 7 4 11 10 10 5 -2 9 -10 7 -18 -2 -13 -1 -13 7 -1 12 19 3 37 -63 114
 -29 34 -58 71 -65 82 -8 14 -11 15 -7 3z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M500 492 c0 -5 10 -17 22 -28 l21 -19 -18 28 c-18 28 -25 33 -25 19z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M608 436 c15 -30 29 -53 32 -51 3 2 4 -31 3 -73 -2 -53 0 -71 7 -57
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M500 492 c0 -5 10 -17 22 -28 l21 -19 -18 28 c-18 28 -25 33 -25 19z"/>
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M608 436 c15 -30 29 -53 32 -51 3 2 4 -31 3 -73 -2 -53 0 -71 7 -57
 10 23 11 149 1 185 -5 18 -9 21 -15 12 -5 -8 -3 -19 3 -25 13 -13 14 -27 2
 -27 -5 0 -13 15 -16 33 -8 33 -22 57 -35 57 -5 0 4 -24 18 -54z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M295 121 c-3 -5 0 -13 6 -17 8 -4 9 -3 5 4 -4 7 -1 12 9 12 9 0 13
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M295 121 c-3 -5 0 -13 6 -17 8 -4 9 -3 5 4 -4 7 -1 12 9 12 9 0 13
 -5 9 -11 -4 -8 3 -9 24 -4 18 3 33 2 37 -5 3 -5 11 -8 16 -4 5 3 7 10 4 15 -4
 5 1 9 10 9 10 0 13 -5 9 -12 -4 -7 -3 -8 5 -4 24 15 -2 26 -64 26 -35 0 -66
 -4 -70 -9z"/>
-            <path class="arc-path" stroke="none" opacity="0.9" d="M335 80 c-3 -5 1 -10 10 -10 9 0 13 5 10 10 -3 6 -8 10 -10 10 -2 0
+          <path class="arc-path affutage-fill-path" stroke="none" opacity="0" d="M335 80 c-3 -5 1 -10 10 -10 9 0 13 5 10 10 -3 6 -8 10 -10 10 -2 0
 -7 -4 -10 -10z"/>
-          </g>
         </g>
 
         <!-- CIBLE (Précision) - Base layer -->
@@ -109,28 +107,26 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
 
         <!-- CIBLE (Précision) - Fill layer -->
         <g id="precision-layer" class="svg-layer precision-layer" style="display: none;">
-          <g clip-path="url(#precision-fill-clip)">
-            <path class="cible-path" stroke="none" opacity="0.9" d="M248 515 c-38 -26 -95 -110 -90 -132 2 -7 -1 -13 -7 -13 -5 0 -7 -9
+          <path class="cible-path precision-fill-path" stroke="none" opacity="0" d="M248 515 c-38 -26 -95 -110 -90 -132 2 -7 -1 -13 -7 -13 -5 0 -7 -9
 -4 -20 4 -15 0 -20 -13 -21 -17 0 -17 -1 2 -11 12 -5 24 -22 27 -37 8 -36 74
 -111 114 -127 48 -21 137 -18 182 6 46 23 85 67 102 115 7 19 17 35 22 35 4 0
 5 5 1 11 -4 7 -8 28 -10 47 -6 64 -20 53 -16 -12 5 -80 -21 -133 -87 -176 -37
 -25 -54 -30 -105 -30 -100 0 -170 55 -196 151 -21 79 26 180 102 218 24 11 36
 21 28 21 -9 0 -32 -11 -52 -25z"/>
-            <path class="cible-path" stroke="none" opacity="0.9" d="M323 500 c-80 -19 -131 -94 -119 -177 7 -56 19 -76 60 -108 122 -93
+          <path class="cible-path precision-fill-path" stroke="none" opacity="0" d="M323 500 c-80 -19 -131 -94 -119 -177 7 -56 19 -76 60 -108 122 -93
 291 16 257 165 -19 86 -111 141 -198 120z m116 -58 c14 -10 32 -37 40 -59 13
 -35 13 -46 0 -79 -18 -46 -69 -84 -114 -84 -38 0 -95 36 -112 70 -29 57 -10
 119 47 158 41 28 97 26 139 -6z"/>
-            <path class="cible-path" stroke="none" opacity="0.9" d="M332 419 c-26 -10 -52 -48 -52 -77 0 -31 52 -82 84 -82 31 0 73 37
+          <path class="cible-path precision-fill-path" stroke="none" opacity="0" d="M332 419 c-26 -10 -52 -48 -52 -77 0 -31 52 -82 84 -82 31 0 73 37
 81 70 13 57 -55 110 -113 89z m62 -45 c9 -8 16 -22 16 -29 0 -19 -28 -45 -49
 -45 -39 0 -57 60 -23 79 24 15 38 13 56 -5z"/>
-            <path class="cible-path" stroke="none" opacity="0.9" d="M350 345 c0 -8 7 -15 15 -15 8 0 15 7 15 15 0 8 -7 15 -15 15 -8 0
+          <path class="cible-path precision-fill-path" stroke="none" opacity="0" d="M350 345 c0 -8 7 -15 15 -15 8 0 15 7 15 15 0 8 -7 15 -15 15 -8 0
 -15 -7 -15 -15z"/>
-          </g>
         </g>
       </g>
       
       <!-- Texte valeur Affûtage -->
-      <text id="affutage-percent" class="jauge-percent affutage-percent" x="36.5" y="25" text-anchor="middle" font-size="8" fill="white" opacity="0" font-weight="bold">0</text>
+      <text id="affutage-percent" class="jauge-percent affutage-percent" x="36.5" y="38" text-anchor="middle" font-size="8" fill="white" opacity="0" font-weight="bold">0</text>
       
       <!-- Texte valeur Précision -->
       <text id="precision-percent" class="jauge-percent precision-percent" x="36.5" y="50" text-anchor="middle" font-size="8" fill="white" opacity="0" font-weight="bold">0</text>
@@ -170,6 +166,50 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
         <g transform="rotate(135 1.75 13.25)">
           <polygon class="stack-bar" points="1.75,11 3.5,15.5 0,15.5" opacity="0.3" />
           <line class="stack-bar-line" x1="1.75" y1="11" x2="1.75" y2="15.5" opacity="0.3" />
+        </g>
+      </g>
+      
+      <!-- Compteur Flèches lumineuses (haut centre) - style flèche lumineuse -->
+      <g id="fleche-lumineuse-counter" class="stack-counter fleche-lumineuse-counter" transform="translate(35, 23)" opacity="0">
+        <!-- Flèche 1 -->
+        <g class="stack-arrow" transform="translate(-8, 2)">
+          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+        </g>
+        <!-- Flèche 2 -->
+        <g class="stack-arrow" transform="translate(-4, 1)">
+          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+        </g>
+        <!-- Flèche 3 -->
+        <g class="stack-arrow" transform="translate(0, 0)">
+          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+        </g>
+        <!-- Flèche 4 -->
+        <g class="stack-arrow" transform="translate(4, 1)">
+          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+        </g>
+        <!-- Flèche 5 -->
+        <g class="stack-arrow" transform="translate(8, 2)">
+          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
+          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
         </g>
       </g>
     </svg>

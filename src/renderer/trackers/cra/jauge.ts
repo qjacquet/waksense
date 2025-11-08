@@ -10,6 +10,8 @@ class CraJaugeTracker {
   private precision: number = 0;
   private pointeAffuteeStacks: number = 0;
   private baliseAffuteeStacks: number = 0;
+  private flecheLumineuseStacks: number = 0;
+  private trackedPlayerName: string | null = null;
   private tirPrecisActive: boolean = false;
   private hasEspritAffute: boolean = false;
   private precisionMax: number = 300;
@@ -25,6 +27,7 @@ class CraJaugeTracker {
   private precisionLayer: SVGGElement | null = null;
   private baliseCounter: SVGGElement | null = null;
   private pointeCounter: SVGGElement | null = null;
+  private flecheLumineuseCounter: SVGGElement | null = null;
   private affutagePercentText: SVGTextElement | null = null;
   private precisionPercentText: SVGTextElement | null = null;
 
@@ -58,20 +61,24 @@ class CraJaugeTracker {
         // ease towards target
         this.currentAffutageFillNormalized += diff * 0.15;
       }
-      if (!this.affutageFillRect && this.svgElement) {
-        this.affutageFillRect = this.svgElement.querySelector(
-          "#affutage-fill-rect"
-        ) as SVGRectElement | null;
+      
+      // Animer chaque path individuellement (comme les compteurs bâtons)
+      if (this.affutageLayer) {
+        const paths = this.affutageLayer.querySelectorAll<SVGPathElement>(".affutage-fill-path");
+        const totalPaths = paths.length;
+        paths.forEach((path, index) => {
+          // Chaque path représente une portion de la jauge
+          const pathThreshold = (index + 1) / totalPaths;
+          if (this.currentAffutageFillNormalized >= pathThreshold) {
+            path.classList.add("active");
+            path.setAttribute("opacity", "0.9");
+          } else {
+            path.classList.remove("active");
+            path.setAttribute("opacity", "0");
+          }
+        });
       }
-      if (this.affutageFillRect) {
-        this.affutageFillRect.setAttribute("x", "0");
-        this.affutageFillRect.setAttribute("y", "0");
-        this.affutageFillRect.setAttribute("width", "1");
-        this.affutageFillRect.setAttribute(
-          "height",
-          String(this.currentAffutageFillNormalized)
-        );
-      }
+      
       // Mettre à jour la valeur pendant l'animation
       if (this.affutagePercentText) {
         const currentAffutageValue = Math.round(this.currentAffutageFillNormalized * 100);
@@ -105,20 +112,24 @@ class CraJaugeTracker {
         // ease towards target
         this.currentPrecisionFillNormalized += diff * 0.15;
       }
-      if (!this.precisionFillRect && this.svgElement) {
-        this.precisionFillRect = this.svgElement.querySelector(
-          "#precision-fill-rect"
-        ) as SVGRectElement | null;
+      
+      // Animer chaque path individuellement (comme les compteurs bâtons)
+      if (this.precisionLayer) {
+        const paths = this.precisionLayer.querySelectorAll<SVGPathElement>(".precision-fill-path");
+        const totalPaths = paths.length;
+        paths.forEach((path, index) => {
+          // Chaque path représente une portion de la jauge
+          const pathThreshold = (index + 1) / totalPaths;
+          if (this.currentPrecisionFillNormalized >= pathThreshold) {
+            path.classList.add("active");
+            path.setAttribute("opacity", "0.9");
+          } else {
+            path.classList.remove("active");
+            path.setAttribute("opacity", "0");
+          }
+        });
       }
-      if (this.precisionFillRect) {
-        this.precisionFillRect.setAttribute("x", "0");
-        this.precisionFillRect.setAttribute("y", "0");
-        this.precisionFillRect.setAttribute("width", "1");
-        this.precisionFillRect.setAttribute(
-          "height",
-          String(this.currentPrecisionFillNormalized)
-        );
-      }
+      
       // Mettre à jour la valeur pendant l'animation
       if (this.precisionPercentText) {
         const currentPrecisionValue = Math.round(this.currentPrecisionFillNormalized * this.precisionMax);
@@ -160,6 +171,7 @@ class CraJaugeTracker {
     this.precisionLayer = document.querySelector<SVGGElement>("#precision-layer");
     this.baliseCounter = document.querySelector<SVGGElement>("#balise-counter");
     this.pointeCounter = document.querySelector<SVGGElement>("#pointe-counter");
+    this.flecheLumineuseCounter = document.querySelector<SVGGElement>("#fleche-lumineuse-counter");
     this.affutagePercentText = document.querySelector<SVGTextElement>("#affutage-percent");
     this.precisionPercentText = document.querySelector<SVGTextElement>("#precision-percent");
     this.tirPrecisLottieContainer = document.getElementById("tir-precis-lottie-container");
@@ -181,6 +193,8 @@ class CraJaugeTracker {
     this.precision = 0;
     this.pointeAffuteeStacks = 0;
     this.baliseAffuteeStacks = 0;
+    this.flecheLumineuseStacks = 0;
+    this.trackedPlayerName = null;
     this.tirPrecisActive = false;
     this.precisionMax = 300;
     this.hasEspritAffute = false;
@@ -205,6 +219,9 @@ class CraJaugeTracker {
 
     // Parse Balise affûtée consumption
     this.parseBaliseAffutee(line);
+
+    // Parse Flèche lumineuse
+    this.parseFlecheLumineuse(line, parsed);
 
     // Parse Tir précis buff
     this.parseTirPrecis(line);
@@ -330,6 +347,45 @@ class CraJaugeTracker {
     }
   }
 
+  private parseFlecheLumineuse(line: string, parsed: any): void {
+    // Détecter le nom du personnage suivi depuis les messages de combat
+    if (parsed.isSpellCast && parsed.spellCast) {
+      const playerName = parsed.spellCast.playerName;
+      const spellName = parsed.spellCast.spellName;
+
+      // Stocker le nom du personnage si on détecte un sort de Cra
+      if (spellName && !this.trackedPlayerName) {
+        // Détecter si c'est un sort de Cra pour identifier le personnage
+        const craSpells = [
+          "Flèche", "Balise", "Tir", "Arc", "Cible"
+        ];
+        if (craSpells.some(spell => spellName.includes(spell))) {
+          this.trackedPlayerName = playerName;
+        }
+      }
+
+      // Vérifier si c'est "Flèche lumineuse"
+      if (spellName && spellName.includes("Flèche lumineuse")) {
+        // Vérifier si c'est notre personnage
+        if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
+          // Chercher "+x niv" dans la ligne
+          const incrementMatch = line.match(/Flèche lumineuse.*?\(\+(\d+)\s*Niv\.\)/i);
+          if (incrementMatch) {
+            const increment = parseInt(incrementMatch[1], 10);
+            this.flecheLumineuseStacks = Math.min(5, this.flecheLumineuseStacks + increment);
+            this.updateUI();
+          } else {
+            // Pas de "+x niv", c'est un décrément
+            if (this.flecheLumineuseStacks > 0) {
+              this.flecheLumineuseStacks--;
+              this.updateUI();
+            }
+          }
+        }
+      }
+    }
+  }
+
   private parseTirPrecis(line: string): void {
     // Parse Tir précis buff activation
     if (line.includes("Tir précis (Niv.")) {
@@ -430,6 +486,8 @@ class CraJaugeTracker {
           this.baliseAffuteeStacks = Number(values.baliseAffuteeStacks);
         if (values.pointeAffuteeStacks !== undefined)
           this.pointeAffuteeStacks = Number(values.pointeAffuteeStacks);
+        if (values.flecheLumineuseStacks !== undefined)
+          this.flecheLumineuseStacks = Number(values.flecheLumineuseStacks);
         this.updateUI();
       } else if (event.data.type === "debug-update") {
         // Mettre à jour une valeur spécifique
@@ -453,6 +511,9 @@ class CraJaugeTracker {
           case "pointeAffuteeStacks":
             this.pointeAffuteeStacks = Number(value);
             break;
+          case "flecheLumineuseStacks":
+            this.flecheLumineuseStacks = Number(value);
+            break;
         }
         this.updateUI();
       }
@@ -470,6 +531,7 @@ class CraJaugeTracker {
       "has-affutage",
       "has-precision",
       "has-tir-precis",
+      "has-fleche-lumineuse",
     ];
 
     this.svgElement.classList.remove(...allClasses);
@@ -500,9 +562,12 @@ class CraJaugeTracker {
       // Stopper l'animation et réinitialiser
       this.targetAffutageFillNormalized = 0;
       this.currentAffutageFillNormalized = 0;
-      if (this.affutageFillRect) {
-        this.affutageFillRect.setAttribute("y", "0");
-        this.affutageFillRect.setAttribute("height", "0");
+      // Réinitialiser l'opacité de tous les paths
+      if (this.affutageLayer) {
+        const paths = this.affutageLayer.querySelectorAll<SVGPathElement>(".affutage-fill-path");
+        paths.forEach((path) => {
+          path.setAttribute("opacity", "0");
+        });
       }
       // Masquer le pourcentage
       if (this.affutagePercentText) {
@@ -528,9 +593,12 @@ class CraJaugeTracker {
       // Stopper l'animation et réinitialiser
       this.targetPrecisionFillNormalized = 0;
       this.currentPrecisionFillNormalized = 0;
-      if (this.precisionFillRect) {
-        this.precisionFillRect.setAttribute("y", "0");
-        this.precisionFillRect.setAttribute("height", "0");
+      // Réinitialiser l'opacité de tous les paths
+      if (this.precisionLayer) {
+        const paths = this.precisionLayer.querySelectorAll<SVGPathElement>(".precision-fill-path");
+        paths.forEach((path) => {
+          path.setAttribute("opacity", "0");
+        });
       }
       // Masquer le pourcentage
       if (this.precisionPercentText) {
@@ -550,6 +618,52 @@ class CraJaugeTracker {
 
     // Mettre à jour les compteurs de stacks
     this.updateStackCounters();
+    this.updateFlecheLumineuseCounter();
+    
+    // Colorer la pointe de la flèche en doré si des flèches lumineuses sont disponibles
+    if (this.flecheLumineuseStacks > 0) {
+      this.svgElement.classList.add("has-fleche-lumineuse");
+    }
+  }
+
+  private updateFlecheLumineuseCounter(): void {
+    // Mettre à jour le compteur de flèches lumineuses (affichage flèches)
+    if (this.flecheLumineuseCounter) {
+      // Masquer le compteur si on a 0 stack
+      if (this.flecheLumineuseStacks === 0) {
+        this.flecheLumineuseCounter.setAttribute("opacity", "0");
+        return;
+      }
+      
+      // Afficher le compteur si on a au moins 1 stack
+      this.flecheLumineuseCounter.setAttribute("opacity", "1");
+      
+      const arrows = this.flecheLumineuseCounter.querySelectorAll<SVGGElement>(".stack-arrow");
+      const maxArrows = 5; // Limite à 5
+      const currentStacks = Math.min(this.flecheLumineuseStacks, 5); // S'assurer qu'on ne dépasse pas 5
+      
+      // Afficher les flèches actives selon le nombre de stacks (max 5)
+      arrows.forEach((arrow, index) => {
+        const body = arrow.querySelector<SVGPolygonElement>(".arrow-body");
+        const tip = arrow.querySelector<SVGPolygonElement>(".arrow-tip");
+        const line = arrow.querySelector<SVGLineElement>(".arrow-line");
+        const rays = arrow.querySelectorAll<SVGLineElement>(".arrow-ray");
+        
+        if (index < currentStacks && index < maxArrows) {
+          arrow.classList.add("active");
+          if (body) body.setAttribute("opacity", "1");
+          if (tip) tip.setAttribute("opacity", "1");
+          if (line) line.setAttribute("opacity", "1");
+          rays.forEach((ray) => ray.setAttribute("opacity", "0.8"));
+        } else {
+          arrow.classList.remove("active");
+          if (body) body.setAttribute("opacity", "0.3");
+          if (tip) tip.setAttribute("opacity", "0.3");
+          if (line) line.setAttribute("opacity", "0.3");
+          rays.forEach((ray) => ray.setAttribute("opacity", "0"));
+        }
+      });
+    }
   }
 
   private updateStackCounters(): void {
