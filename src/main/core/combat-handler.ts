@@ -209,11 +209,18 @@ export class CombatHandler {
       if (trackerWindow && !trackerWindow.isDestroyed()) {
         console.log(`[COMBAT HANDLER] Tracker ${trackerType} created, hiding it`);
         trackerWindow.hide();
+        const trackerId = TrackerManager.getTrackerId(
+          fighter.className,
+          fighter.playerName,
+          trackerType
+        );
         trackerWindow.webContents.once("did-finish-load", () => {
-          if (trackerWindow && !trackerWindow.isDestroyed()) {
+          // Vérifier que la fenêtre existe toujours dans la Map et n'est pas détruite
+          const stillExists = WindowManager.getWindow(trackerId);
+          if (stillExists && !stillExists.isDestroyed()) {
             console.log(`[COMBAT HANDLER] Tracker ${trackerType} finished loading, sending combat-started`);
-            trackerWindow.hide();
-            WindowManager.safeSendToWindow(trackerWindow, IPC_EVENTS.COMBAT_STARTED);
+            stillExists.hide();
+            WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.COMBAT_STARTED);
           }
         });
         WindowManager.safeSendToWindow(trackerWindow, IPC_EVENTS.COMBAT_STARTED);

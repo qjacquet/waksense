@@ -357,14 +357,23 @@ export class TrackerManager {
       const window = this.showTracker(character, trackerType);
       if (window && !window.isDestroyed()) {
         console.log(`[TRACKER MANAGER] Tracker ${trackerType} window obtained, isVisible: ${window.isVisible()}`);
+        const trackerId = this.getTrackerId(
+          character.className,
+          character.playerName,
+          trackerType
+        );
         if (window.webContents.isLoading()) {
           console.log(`[TRACKER MANAGER] Tracker ${trackerType} is loading, waiting for did-finish-load`);
           window.webContents.once("did-finish-load", () => {
-            console.log(`[TRACKER MANAGER] Tracker ${trackerType} finished loading, sending events`);
-            WindowManager.safeSendToWindow(window, IPC_EVENTS.COMBAT_STARTED);
-            setTimeout(() => {
-              WindowManager.safeSendToWindow(window, IPC_EVENTS.REFRESH_UI);
-            }, 100);
+            // Vérifier que la fenêtre existe toujours dans la Map et n'est pas détruite
+            const stillExists = WindowManager.getWindow(trackerId);
+            if (stillExists && !stillExists.isDestroyed()) {
+              console.log(`[TRACKER MANAGER] Tracker ${trackerType} finished loading, sending events`);
+              WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.COMBAT_STARTED);
+              setTimeout(() => {
+                WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.REFRESH_UI);
+              }, 100);
+            }
           });
         } else {
           console.log(`[TRACKER MANAGER] Tracker ${trackerType} already loaded, sending events immediately`);

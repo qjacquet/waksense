@@ -46,8 +46,10 @@ export class WindowSetup {
     );
 
     window.webContents.once("did-finish-load", () => {
-      window.show();
-      window.focus();
+      if (!window.isDestroyed()) {
+        window.show();
+        window.focus();
+      }
     });
   }
 
@@ -60,6 +62,8 @@ export class WindowSetup {
     onClose: (id: string) => void
   ): void {
     window.on("closed", () => {
+      // L'événement "closed" est déclenché après que la fenêtre soit détruite
+      // On appelle juste le callback pour nettoyer la Map
       onClose(trackerId);
     });
   }

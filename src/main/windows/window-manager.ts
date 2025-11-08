@@ -84,13 +84,17 @@ export class WindowManager {
     const window = new BrowserWindow(defaults);
 
     window.on("moved", () => {
-      const bounds = window.getBounds();
-      Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
+      if (!window.isDestroyed()) {
+        const bounds = window.getBounds();
+        Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
+      }
     });
 
     window.on("resized", () => {
-      const bounds = window.getBounds();
-      Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
+      if (!window.isDestroyed()) {
+        const bounds = window.getBounds();
+        Config.saveOverlayPosition(id, bounds.x, bounds.y, bounds.width, bounds.height);
+      }
     });
 
     this.windows.set(id, window);
@@ -178,8 +182,10 @@ export class WindowManager {
     window
       .loadFile(htmlPath)
       .then(() => {
-        window.show();
-        window.focus();
+        if (!window.isDestroyed()) {
+          window.show();
+          window.focus();
+        }
       })
       .catch((error) => {
         console.error("[DEBUG] Error loading HTML:", error);
@@ -277,6 +283,10 @@ export class WindowManager {
       return { isVisible: false, result: "false" };
     }
 
+    if (window.isDestroyed()) {
+      return { isVisible: false, result: "false" };
+    }
+
     if (window.isVisible()) {
       window.hide();
       return { isVisible: false, result: "false" };
@@ -299,9 +309,28 @@ export class WindowManager {
    */
   static closeWindow(id: string): void {
     const window = this.windows.get(id);
-    if (window) {
-      window.close();
+    if (!window) {
+      // La fenêtre n'existe pas dans la Map, rien à faire
+      return;
+    }
+
+    // Vérifier si la fenêtre est déjà détruite (cas où l'utilisateur a fermé manuellement)
+    if (window.isDestroyed()) {
+      // La fenêtre est déjà détruite, juste la supprimer de la Map
       this.windows.delete(id);
+      return;
+    }
+
+    // Supprimer la fenêtre de la Map avant de la fermer
+    // L'événement "closed" sera géré par setupLifecycle qui ne fera rien
+    // car la fenêtre ne sera plus dans la Map
+    this.windows.delete(id);
+
+    try {
+      window.close();
+    } catch (error) {
+      // Ignorer les erreurs si la fenêtre est déjà en cours de fermeture
+      console.warn(`[WINDOW MANAGER] Error closing window ${id}:`, error);
     }
   }
 
@@ -310,7 +339,9 @@ export class WindowManager {
    */
   static closeAll(): void {
     for (const [id, window] of this.windows) {
-      window.close();
+      if (!window.isDestroyed()) {
+        window.close();
+      }
     }
     this.windows.clear();
   }
