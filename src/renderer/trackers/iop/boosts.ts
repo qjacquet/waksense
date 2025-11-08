@@ -8,6 +8,7 @@ import {
   updateProgressBar,
   updateStackIndicator,
 } from "../../core/ui-helpers.js";
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 
 class IopBoostsTracker {
   private concentration: number = 0;
@@ -75,7 +76,7 @@ class IopBoostsTracker {
   constructor() {
     // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
 
     this.loadIcons();
     this.setupEventListeners();

@@ -7,6 +7,7 @@ import {
   setupTrackerEventListeners,
   updateProgressBar,
 } from "../../core/ui-helpers.js";
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 
 interface TimelineEntry {
   spell: string;
@@ -158,7 +159,7 @@ class OuginakTracker {
 
     // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
 
     this.setupEventListeners();
     if (this.debugMode) {

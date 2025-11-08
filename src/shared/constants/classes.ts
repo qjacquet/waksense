@@ -7,3 +7,4 @@ export const CLASS_NAMES = {
   OUGINAK: "Ouginak",
 } as const;
 
+

@@ -2,7 +2,8 @@
  * Debug UI - Interface de debug pour prévisualiser les trackers
  */
 
-import { TRACKER_CONFIGS, TrackerConfig } from "./tracker-configs";
+import { TRACKER_CONFIGS, TrackerConfig } from "./tracker-configs.js";
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 
 class DebugUI {
   private trackerSelect: HTMLSelectElement | null = null;
@@ -82,7 +83,9 @@ class DebugUI {
     this.currentTracker = selectedValue;
 
     // Construire le chemin vers le tracker
-    const trackerPath = `../../trackers/${selectedValue}?debug=true`;
+    // Depuis renderer/core/debug/index.html, on remonte de 2 niveaux (../../) pour aller à renderer/, puis on va dans trackers/
+    // Le chemin relatif devrait fonctionner dans Electron car le fichier HTML est chargé avec loadFile()
+    const trackerPath = `../../trackers/${selectedValue}?${PATTERNS.DEBUG_URL_PARAM}=true`;
 
     // Charger le tracker dans l'iframe
     this.previewIframe.src = trackerPath;

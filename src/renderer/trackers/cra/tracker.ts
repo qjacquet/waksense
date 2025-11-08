@@ -4,6 +4,7 @@
  */
 
 import { setupTrackerEventListeners } from "../../core/ui-helpers.js";
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 import { ResourceState } from "./core/resource-state.js";
 import { AffutageParser } from "./parsers/affutage-parser.js";
 import { PrecisionParser } from "./parsers/precision-parser.js";
@@ -28,7 +29,7 @@ class CraTracker {
   constructor() {
     // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
 
     // Initialiser les modules
     this.state = new ResourceState();

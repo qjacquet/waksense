@@ -3,6 +3,8 @@
  * 5 colonnes de combos avec leurs étapes PA/PM/PW
  */
 
+import { PATTERNS } from "../../../shared/constants/patterns.js";
+
 interface ComboDefinition {
   name: string;
   steps: string[];
@@ -42,7 +44,7 @@ class IopCombosTracker {
   constructor() {
     // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
     // Initialize spell cost map
     this.spellCostMap.set("Épée céleste", "2PA");
     this.spellCostMap.set("Fulgur", "3PA");

@@ -9,3 +9,4 @@ export const IPC_EVENTS = {
   CLASS_DETECTED: "class-detected",
 } as const;
 
+
