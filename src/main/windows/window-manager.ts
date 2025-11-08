@@ -9,6 +9,7 @@ import {
 } from "electron";
 import * as path from "path";
 import { Config } from "../core/config";
+import { WindowSetup } from "./window-setup";
 
 export interface WindowBounds {
   x: number;
@@ -170,9 +171,9 @@ export class WindowManager {
       "index.html"
     );
 
-    this.setupWindowErrorHandlers(window, htmlPath, "DEBUG");
-    this.setupWindowConsoleLogging(window, "DEBUG");
-    this.setupWindowLifecycle(window, "debug");
+    WindowSetup.setupErrorHandlers(window, htmlPath, "DEBUG");
+    WindowSetup.setupConsoleLogging(window, "DEBUG");
+    WindowSetup.setupLifecycle(window, "debug", (id) => this.closeWindow(id));
 
     window
       .loadFile(htmlPath)
@@ -221,9 +222,9 @@ export class WindowManager {
       htmlFile
     );
 
-    this.setupWindowErrorHandlers(window, htmlPath, config.rendererName);
-    this.setupWindowConsoleLogging(window, config.rendererName);
-    this.setupWindowLifecycle(window, trackerId);
+    WindowSetup.setupErrorHandlers(window, htmlPath, config.rendererName);
+    WindowSetup.setupConsoleLogging(window, config.rendererName);
+    WindowSetup.setupLifecycle(window, trackerId, (id) => this.closeWindow(id));
 
     window
       .loadFile(htmlPath)
@@ -243,63 +244,6 @@ export class WindowManager {
     return window;
   }
 
-  /**
-   * Configure les handlers d'erreur pour une fenêtre
-   */
-  private static setupWindowErrorHandlers(
-    window: BrowserWindow,
-    htmlPath: string,
-    rendererName?: string
-  ): void {
-    window.webContents.on(
-      "did-fail-load",
-      (event, errorCode, errorDescription, validatedURL) => {
-        console.error(
-          `[${
-            rendererName || "TRACKER"
-          }] Failed to load: ${errorCode} - ${errorDescription} - ${validatedURL}`
-        );
-        console.error(
-          `[${rendererName || "TRACKER"}] Attempted to load: ${htmlPath}`
-        );
-      }
-    );
-  }
-
-  /**
-   * Configure le logging console pour une fenêtre
-   */
-  private static setupWindowConsoleLogging(
-    window: BrowserWindow,
-    rendererName?: string
-  ): void {
-    const logPrefix = rendererName || "TRACKER";
-    window.webContents.on(
-      "console-message",
-      (event, level, message, line, sourceId) => {
-        console.log(
-          `[${logPrefix} RENDERER ${level}]: ${message} (${sourceId}:${line})`
-        );
-      }
-    );
-
-    window.webContents.once("did-finish-load", () => {
-      window.show();
-      window.focus();
-    });
-  }
-
-  /**
-   * Configure le cycle de vie d'une fenêtre
-   */
-  private static setupWindowLifecycle(
-    window: BrowserWindow,
-    trackerId: string
-  ): void {
-    window.on("closed", () => {
-      this.closeWindow(trackerId);
-    });
-  }
 
   /**
    * Envoie un message de manière sécurisée à une fenêtre

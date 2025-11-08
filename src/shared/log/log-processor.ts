@@ -4,6 +4,7 @@
  */
 
 import { breedToClass } from '../domain/wakfu-domain';
+import { LOG_PATTERNS } from './log-patterns';
 
 interface LogEntry {
   timestampMs: number;
@@ -63,10 +64,10 @@ export class LogParser {
       };
     }
 
-    const timestampMatch = trimmed.match(/^(\d{2}:\d{2}:\d{2},\d{3})/);
+    const timestampMatch = trimmed.match(LOG_PATTERNS.TIMESTAMP);
     const timestamp = timestampMatch ? timestampMatch[1] : '';
 
-    const contentMatch = trimmed.match(/^\d{2}:\d{2}:\d{2},\d{3}\s*-\s*(.+)$/);
+    const contentMatch = trimmed.match(LOG_PATTERNS.CONTENT);
     const content = contentMatch ? contentMatch[1] : trimmed;
 
     let type: 'combat' | 'information' | 'other' = 'other';
@@ -76,10 +77,10 @@ export class LogParser {
       type = 'information';
     }
 
-    let spellMatch = content.match(/\[Information \(combat\)\]\s*([^:]+?)[:\s]+\s*lance le sort\s+(.+?)(?:\s*\(|$)/);
+    let spellMatch = content.match(LOG_PATTERNS.SPELL_CAST_PRIMARY);
     
     if (!spellMatch) {
-      spellMatch = content.match(/\[Information \(combat\)\]\s*([^:]+?)[:\s]+lance le sort\s+(.+)/);
+      spellMatch = content.match(LOG_PATTERNS.SPELL_CAST_FALLBACK);
     }
     
     let playerPart: string | undefined;
@@ -145,8 +146,7 @@ export class LogParser {
     // Exemple: INFO ... - [_FL_] fightId=1552072008 Astra Gladia breed : 8 [7595487] isControlledByAI=false ...
     // Le nom peut contenir des espaces, donc on prend tout jusqu'à "breed :"
     // Le fighterId est le nombre entre crochets après breed
-    const pattern = /\[_FL_\]\s+fightId=(\d+)\s+(.+?)\s+breed\s*:\s*(\d+)\s+\[(\d+)\]\s+.*?isControlledByAI=(true|false)/;
-    const match = line.match(pattern);
+    const match = line.match(LOG_PATTERNS.COMBAT_START);
     
     if (match) {
       const fightId = parseInt(match[1], 10);
@@ -194,8 +194,7 @@ export class LogParser {
    * Pattern: INFO ... - [FIGHT] End fight with id 1552084023
    */
   static parseCombatEnd(line: string): number | null {
-    const pattern = /\[FIGHT\]\s+End fight with id\s+(\d+)/;
-    const match = line.match(pattern);
+    const match = line.match(LOG_PATTERNS.COMBAT_END);
     
     if (match) {
       return parseInt(match[1], 10);
@@ -211,15 +210,13 @@ export class LogParser {
    */
   static extractFighterIdFromSpellLine(line: string): number | null {
     // Pattern 1: fighterId=XXXX dans la ligne
-    const pattern1 = /fighterId[=:](\d+)/i;
-    const match1 = line.match(pattern1);
+    const match1 = line.match(LOG_PATTERNS.FIGHTER_ID_PATTERN1);
     if (match1) {
       return parseInt(match1[1], 10);
     }
 
     // Pattern 2: [XXXX] dans la ligne (si c'est un fighterId)
-    const pattern2 = /\[(\d+)\]/;
-    const match2 = line.match(pattern2);
+    const match2 = line.match(LOG_PATTERNS.FIGHTER_ID_PATTERN2);
     if (match2) {
       return parseInt(match2[1], 10);
     }
@@ -288,7 +285,7 @@ export class LogDeduplicator {
    */
   private parseLogLine(line: string): { timestamp: string | null; content: string | null } {
     try {
-      const match = line.trim().match(/^(\d{2}:\d{2}:\d{2},\d{3})\s*-\s*(.+)$/);
+      const match = line.trim().match(LOG_PATTERNS.CONTENT);
       if (match) {
         return {
           timestamp: match[1],
