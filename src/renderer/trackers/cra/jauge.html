@@ -18,6 +18,12 @@
         <clipPath id="affutage-fill-clip" clipPathUnits="objectBoundingBox">
           <rect id="affutage-fill-rect" x="0" y="0" width="1" height="0" />
         </clipPath>
+        <!-- Gradient radial pour les points de flèche lumineuse -->
+        <radialGradient id="fleche-point-gradient">
+          <stop offset="0%" stop-color="#FFFF99" stop-opacity="1" />
+          <stop offset="50%" stop-color="#FFD700" stop-opacity="1" />
+          <stop offset="100%" stop-color="#FFA500" stop-opacity="0.8" />
+        </radialGradient>
         <!-- ClipPath pour l'effet de remplissage de précision (cible) -->
         <clipPath id="precision-fill-clip" clipPathUnits="objectBoundingBox">
           <rect id="precision-fill-rect" x="0" y="0" width="1" height="0" />
@@ -169,47 +175,27 @@ m-248 -233 c-3 -9 -8 -14 -10 -11 -3 3 -2 9 2 15 9 16 15 13 8 -4z m-3 -35 c0
         </g>
       </g>
       
-      <!-- Compteur Flèches lumineuses (haut centre) - style flèche lumineuse -->
+      <!-- Compteur Flèches lumineuses (haut centre) - style points simples -->
       <g id="fleche-lumineuse-counter" class="stack-counter fleche-lumineuse-counter" transform="translate(35, 23)" opacity="0">
-        <!-- Flèche 1 -->
+        <!-- Point 1 -->
         <g class="stack-arrow" transform="translate(-8, 2)">
-          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <circle class="arrow-point" cx="1.5" cy="2.5" r="1.5" fill="url(#fleche-point-gradient)" stroke="#FFFF00" stroke-width="0.3" opacity="0.3" />
         </g>
-        <!-- Flèche 2 -->
+        <!-- Point 2 -->
         <g class="stack-arrow" transform="translate(-4, 1)">
-          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <circle class="arrow-point" cx="1.5" cy="2.5" r="1.5" fill="url(#fleche-point-gradient)" stroke="#FFFF00" stroke-width="0.3" opacity="0.3" />
         </g>
-        <!-- Flèche 3 -->
+        <!-- Point 3 -->
         <g class="stack-arrow" transform="translate(0, 0)">
-          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <circle class="arrow-point" cx="1.5" cy="2.5" r="1.5" fill="url(#fleche-point-gradient)" stroke="#FFFF00" stroke-width="0.3" opacity="0.3" />
         </g>
-        <!-- Flèche 4 -->
+        <!-- Point 4 -->
         <g class="stack-arrow" transform="translate(4, 1)">
-          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <circle class="arrow-point" cx="1.5" cy="2.5" r="1.5" fill="url(#fleche-point-gradient)" stroke="#FFFF00" stroke-width="0.3" opacity="0.3" />
         </g>
-        <!-- Flèche 5 -->
+        <!-- Point 5 -->
         <g class="stack-arrow" transform="translate(8, 2)">
-          <polygon class="arrow-body" points="1.5,0 3,3.5 0,3.5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <polygon class="arrow-tip" points="1.5,3.5 2.5,5 0.5,5" fill="#ffd700" stroke="white" stroke-width="0.3" opacity="0.3" />
-          <line class="arrow-line" x1="1.5" y1="0" x2="1.5" y2="5" stroke="white" stroke-width="0.4" opacity="0.3" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="0.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
-          <line class="arrow-ray" x1="1.5" y1="2.5" x2="2.5" y2="1.5" stroke="#ffd700" stroke-width="0.2" opacity="0" />
+          <circle class="arrow-point" cx="1.5" cy="2.5" r="1.5" fill="url(#fleche-point-gradient)" stroke="#FFFF00" stroke-width="0.3" opacity="0.3" />
         </g>
       </g>
     </svg>

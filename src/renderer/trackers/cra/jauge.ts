@@ -348,34 +348,64 @@ class CraJaugeTracker {
   }
 
   private parseFlecheLumineuse(line: string, parsed: any): void {
-    // Détecter le nom du personnage suivi depuis les messages de combat
-    if (parsed.isSpellCast && parsed.spellCast) {
-      const playerName = parsed.spellCast.playerName;
-      const spellName = parsed.spellCast.spellName;
-
-      // Stocker le nom du personnage si on détecte un sort de Cra
-      if (spellName && !this.trackedPlayerName) {
-        // Détecter si c'est un sort de Cra pour identifier le personnage
-        const craSpells = [
-          "Flèche", "Balise", "Tir", "Arc", "Cible"
-        ];
-        if (craSpells.some(spell => spellName.includes(spell))) {
-          this.trackedPlayerName = playerName;
+    // Chercher directement dans la ligne le pattern ": Flèche lumineuse (+x Niv.) (Archer Futé)"
+    // Pattern: ": Flèche lumineuse (+x Niv.) (Archer Futé)" où x est entre 1 et 5
+    const flecheLumineuseMatch = line.match(/:\s*Flèche lumineuse\s*\(\+(\d+)\s*Niv\.\)\s*\(Archer Futé\)/i);
+    
+    if (flecheLumineuseMatch) {
+      const increment = parseInt(flecheLumineuseMatch[1], 10);
+      
+      // Vérifier que le nombre est entre 1 et 5
+      if (increment >= 1 && increment <= 5) {
+        // Détecter le nom du personnage depuis les messages de combat
+        if (parsed.isSpellCast && parsed.spellCast) {
+          const playerName = parsed.spellCast.playerName;
+          
+          // Stocker le nom du personnage si on détecte un sort de Cra
+          if (!this.trackedPlayerName) {
+            const spellName = parsed.spellCast.spellName;
+            // Détecter si c'est un sort de Cra pour identifier le personnage
+            const craSpells = [
+              "Flèche", "Balise", "Tir", "Arc", "Cible"
+            ];
+            if (spellName && craSpells.some(spell => spellName.includes(spell))) {
+              this.trackedPlayerName = playerName;
+            }
+          }
+          
+          // Vérifier si c'est notre personnage
+          if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
+            this.flecheLumineuseStacks = Math.min(5, increment);
+            this.updateUI();
+          }
+        } else {
+          // Si on ne peut pas identifier le joueur via spellCast, on peut quand même écraser la valeur
+          // en se basant uniquement sur le pattern dans la ligne
+          this.flecheLumineuseStacks = Math.min(5, increment);
+            this.updateUI();
         }
       }
-
-      // Vérifier si c'est "Flèche lumineuse"
-      if (spellName && spellName.includes("Flèche lumineuse")) {
-        // Vérifier si c'est notre personnage
-        if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
-          // Chercher "+x niv" dans la ligne
-          const incrementMatch = line.match(/Flèche lumineuse.*?\(\+(\d+)\s*Niv\.\)/i);
-          if (incrementMatch) {
-            const increment = parseInt(incrementMatch[1], 10);
-            this.flecheLumineuseStacks = Math.min(5, this.flecheLumineuseStacks + increment);
-            this.updateUI();
-          } else {
-            // Pas de "+x niv", c'est un décrément
+    } else {
+      // Vérifier si c'est une consommation de flèche lumineuse (pas de pattern "+x Niv.")
+      // On cherche un message de sort lancé avec "Flèche lumineuse" mais sans le pattern d'incrément
+      if (parsed.isSpellCast && parsed.spellCast) {
+        const playerName = parsed.spellCast.playerName;
+        const spellName = parsed.spellCast.spellName;
+        
+        // Stocker le nom du personnage si on détecte un sort de Cra
+        if (spellName && !this.trackedPlayerName) {
+          const craSpells = [
+            "Flèche", "Balise", "Tir", "Arc", "Cible"
+          ];
+          if (craSpells.some(spell => spellName.includes(spell))) {
+            this.trackedPlayerName = playerName;
+          }
+        }
+        
+        // Si c'est "Flèche lumineuse" sans le pattern d'incrément, c'est une consommation
+        if (spellName && spellName.includes("Flèche lumineuse") && 
+            !line.match(/:\s*Flèche lumineuse\s*\(\+\d+\s*Niv\.\)/i)) {
+          if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
             if (this.flecheLumineuseStacks > 0) {
               this.flecheLumineuseStacks--;
               this.updateUI();
@@ -627,7 +657,7 @@ class CraJaugeTracker {
   }
 
   private updateFlecheLumineuseCounter(): void {
-    // Mettre à jour le compteur de flèches lumineuses (affichage flèches)
+    // Mettre à jour le compteur de flèches lumineuses (affichage points)
     if (this.flecheLumineuseCounter) {
       // Masquer le compteur si on a 0 stack
       if (this.flecheLumineuseStacks === 0) {
@@ -642,25 +672,16 @@ class CraJaugeTracker {
       const maxArrows = 5; // Limite à 5
       const currentStacks = Math.min(this.flecheLumineuseStacks, 5); // S'assurer qu'on ne dépasse pas 5
       
-      // Afficher les flèches actives selon le nombre de stacks (max 5)
+      // Afficher les points actifs selon le nombre de stacks (max 5)
       arrows.forEach((arrow, index) => {
-        const body = arrow.querySelector<SVGPolygonElement>(".arrow-body");
-        const tip = arrow.querySelector<SVGPolygonElement>(".arrow-tip");
-        const line = arrow.querySelector<SVGLineElement>(".arrow-line");
-        const rays = arrow.querySelectorAll<SVGLineElement>(".arrow-ray");
+        const point = arrow.querySelector<SVGCircleElement>(".arrow-point");
         
         if (index < currentStacks && index < maxArrows) {
           arrow.classList.add("active");
-          if (body) body.setAttribute("opacity", "1");
-          if (tip) tip.setAttribute("opacity", "1");
-          if (line) line.setAttribute("opacity", "1");
-          rays.forEach((ray) => ray.setAttribute("opacity", "0.8"));
+          if (point) point.setAttribute("opacity", "1");
         } else {
           arrow.classList.remove("active");
-          if (body) body.setAttribute("opacity", "0.3");
-          if (tip) tip.setAttribute("opacity", "0.3");
-          if (line) line.setAttribute("opacity", "0.3");
-          rays.forEach((ray) => ray.setAttribute("opacity", "0"));
+          if (point) point.setAttribute("opacity", "0.3");
         }
       });
     }
