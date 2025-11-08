@@ -4,8 +4,14 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 
-// Ne pas charger lottie-web ici - on va utiliser le CDN dans le HTML
-// pour éviter les problèmes de résolution de modules dans le preload
+// IPC Events constants - inlined to avoid module resolution issues in sandboxed context
+const IPC_EVENTS = {
+  COMBAT_STARTED: "combat-started",
+  COMBAT_ENDED: "combat-ended",
+  LOG_LINE: "log-line",
+  REFRESH_UI: "refresh-ui",
+  CLASS_DETECTED: "class-detected",
+} as const;
 
 // Expose les API IPC au renderer de manière sécurisée
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -44,23 +50,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onClassDetected: (
     callback: (detection: { className: string; playerName: string }) => void
   ) => {
-    ipcRenderer.on("class-detected", (_event, detection) => {
+    ipcRenderer.on(IPC_EVENTS.CLASS_DETECTED, (_event, detection) => {
       callback(detection);
     });
   },
   onCombatStarted: (callback: () => void) => {
-    ipcRenderer.on("combat-started", () => callback());
+    ipcRenderer.on(IPC_EVENTS.COMBAT_STARTED, () => callback());
   },
   onCombatEnded: (callback: () => void) => {
-    ipcRenderer.on("combat-ended", () => callback());
+    ipcRenderer.on(IPC_EVENTS.COMBAT_ENDED, () => callback());
   },
   onLogLine: (callback: (line: string, parsed: any) => void) => {
-    ipcRenderer.on("log-line", (_event, line, parsed) =>
+    ipcRenderer.on(IPC_EVENTS.LOG_LINE, (_event, line, parsed) =>
       callback(line, parsed)
     );
   },
   onRefreshUI: (callback: () => void) => {
-    ipcRenderer.on("refresh-ui", () => callback());
+    ipcRenderer.on(IPC_EVENTS.REFRESH_UI, () => callback());
   },
   onMonitoringStarted: (callback: () => void) => {
     ipcRenderer.on("monitoring-started", () => callback());

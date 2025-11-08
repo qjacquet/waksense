@@ -17,6 +17,8 @@ import {
 import { WindowManager } from "../windows/window-manager";
 import { Config } from "./config";
 import { CombatHandler } from "./combat-handler";
+import { IPC_EVENTS } from "../../shared/constants/ipc-events";
+import { PATTERNS } from "../../shared/constants/patterns";
 
 export interface Character {
   className: string;
@@ -33,11 +35,10 @@ export class TrackerManager {
     playerName: string,
     trackerType: string
   ): string {
-    // Le tracker principal n'a pas de suffixe
-    if (trackerType === "main" || trackerType === "") {
-      return `tracker-${className}-${playerName}`;
+    if (trackerType === PATTERNS.TRACKER_MAIN || trackerType === "") {
+      return `${PATTERNS.TRACKER_ID_PREFIX}${className}-${playerName}`;
     }
-    return `tracker-${className}-${playerName}-${trackerType}`;
+    return `${PATTERNS.TRACKER_ID_PREFIX}${className}-${playerName}-${trackerType}`;
   }
 
   /**
@@ -47,8 +48,10 @@ export class TrackerManager {
     character: Character,
     trackerType: string
   ): BrowserWindow | null {
+    console.log(`[TRACKER MANAGER] createTracker: ${character.className}.${trackerType} for ${character.playerName}`);
     const config = getTrackerConfig(character.className, trackerType);
     if (!config) {
+      console.log(`[TRACKER MANAGER] No config found for ${character.className}.${trackerType}`);
       return null;
     }
 
@@ -57,9 +60,10 @@ export class TrackerManager {
       character.playerName,
       trackerType
     );
+    console.log(`[TRACKER MANAGER] Tracker ID: ${trackerId}`);
 
-    // Vérifier si le tracker existe déjà
     if (WindowManager.hasWindow(trackerId)) {
+      console.log(`[TRACKER MANAGER] Tracker ${trackerId} already exists`);
       return WindowManager.getWindow(trackerId) || null;
     }
 
@@ -107,15 +111,17 @@ export class TrackerManager {
       character.playerName,
       trackerType
     );
+    console.log(`[TRACKER MANAGER] showTracker: trackerId=${trackerId}`);
     const window = WindowManager.getWindow(trackerId);
 
     if (window && !window.isDestroyed()) {
+      console.log(`[TRACKER MANAGER] Tracker ${trackerId} exists, showing it`);
       window.show();
       window.focus();
       return window;
     }
 
-    // Créer le tracker s'il n'existe pas
+    console.log(`[TRACKER MANAGER] Tracker ${trackerId} doesn't exist, creating it`);
     return this.createTracker(character, trackerType);
   }
 
@@ -153,13 +159,11 @@ export class TrackerManager {
     const allWindows = WindowManager.getAllWindows();
     const hideTogetherSuffixes = getAllHideTogetherSuffixes();
 
-    // Cacher toutes les fenêtres qui correspondent aux suffixes
     for (const [id, window] of allWindows) {
       if (window.isDestroyed()) {
         continue;
       }
 
-      // Vérifier les suffixes normaux (ex: "-jauge", "-combos")
       for (const suffix of hideTogetherSuffixes) {
         if (id.endsWith(suffix)) {
           window.hide();
@@ -167,20 +171,13 @@ export class TrackerManager {
         }
       }
 
-      // Vérifier les trackers "main" (sans suffixe) pour les classes configurées
-      // Pattern: tracker-{className}-{playerName} (sans suffixe supplémentaire)
       for (const [classNameLower, classConfig] of CLASS_TRACKER_CONFIGS.entries()) {
         if (classConfig.hideTogether) {
           for (const group of classConfig.hideTogether) {
-            if (group.includes("main")) {
-              // Vérifier si l'ID correspond au pattern tracker-{className}-{playerName}
-              // et ne se termine pas par un suffixe connu
-              const pattern = `tracker-${classNameLower}-`;
+            if (group.includes(PATTERNS.TRACKER_MAIN)) {
+              const pattern = `${PATTERNS.TRACKER_ID_PREFIX}${classNameLower}-`;
               if (id.startsWith(pattern)) {
-                // Extraire la partie après le pattern
                 const afterPattern = id.substring(pattern.length);
-                // Si après le pattern il n'y a pas de tiret, c'est le tracker principal
-                // (car les autres trackers ont un suffixe comme "-jauge" ou "-combos")
                 if (!afterPattern.includes("-")) {
                   window.hide();
                   break;
@@ -212,7 +209,6 @@ export class TrackerManager {
       return { window, isVisible: result.isVisible };
     }
 
-    // Créer et afficher si n'existe pas
     const newWindow = this.createTracker(character, trackerType);
     if (newWindow && !newWindow.isDestroyed()) {
       newWindow.show();
@@ -237,7 +233,6 @@ export class TrackerManager {
     const windows: BrowserWindow[] = [];
     let allVisible = true;
 
-    // Vérifier si tous les trackers sont visibles
     for (const trackerType of classConfig.availableTrackerTypes) {
       const trackerId = this.getTrackerId(
         character.className,
@@ -255,9 +250,7 @@ export class TrackerManager {
       }
     }
 
-    // Toggle tous les trackers
     if (allVisible && windows.length > 0) {
-      // Tout cacher
       for (const window of windows) {
         if (!window.isDestroyed()) {
           window.hide();
@@ -265,7 +258,6 @@ export class TrackerManager {
       }
       return { windows, isVisible: false };
     } else {
-      // Tout afficher ou créer
       const newWindows: BrowserWindow[] = [];
       for (const trackerType of classConfig.availableTrackerTypes) {
         const window = this.showTracker(character, trackerType);
@@ -347,41 +339,45 @@ export class TrackerManager {
 
   /**
    * Affiche automatiquement les trackers configurés pour un personnage au début du tour
-   * C'est LE SEUL endroit où l'affichage automatique est géré
    */
   static showTrackersOnTurnStart(character: Character): void {
-    // Ne pas afficher les trackers si on n'est pas en combat
+    console.log(`[TRACKER MANAGER] showTrackersOnTurnStart called for ${character.playerName} (${character.className})`);
     if (!CombatHandler.isInCombat()) {
+      console.log("[TRACKER MANAGER] Not in combat, returning");
       return;
     }
 
     const autoShow = getAutoShowTrackers(character.className);
     const autoCreateButHide = getAutoCreateButHideTrackers(character.className);
+    console.log(`[TRACKER MANAGER] Auto show trackers:`, autoShow);
+    console.log(`[TRACKER MANAGER] Auto create but hide:`, autoCreateButHide);
 
-    // Afficher les trackers configurés pour l'affichage automatique
     for (const trackerType of autoShow) {
+      console.log(`[TRACKER MANAGER] Showing tracker ${trackerType} for ${character.playerName}`);
       const window = this.showTracker(character, trackerType);
       if (window && !window.isDestroyed()) {
-        // S'assurer que la fenêtre est complètement chargée avant d'envoyer les événements
+        console.log(`[TRACKER MANAGER] Tracker ${trackerType} window obtained, isVisible: ${window.isVisible()}`);
         if (window.webContents.isLoading()) {
+          console.log(`[TRACKER MANAGER] Tracker ${trackerType} is loading, waiting for did-finish-load`);
           window.webContents.once("did-finish-load", () => {
-            WindowManager.safeSendToWindow(window, "combat-started");
-            // Forcer une mise à jour de l'UI après un court délai pour s'assurer que tout est prêt
+            console.log(`[TRACKER MANAGER] Tracker ${trackerType} finished loading, sending events`);
+            WindowManager.safeSendToWindow(window, IPC_EVENTS.COMBAT_STARTED);
             setTimeout(() => {
-              WindowManager.safeSendToWindow(window, "refresh-ui");
+              WindowManager.safeSendToWindow(window, IPC_EVENTS.REFRESH_UI);
             }, 100);
           });
         } else {
-          WindowManager.safeSendToWindow(window, "combat-started");
-          // Forcer une mise à jour de l'UI après un court délai
+          console.log(`[TRACKER MANAGER] Tracker ${trackerType} already loaded, sending events immediately`);
+          WindowManager.safeSendToWindow(window, IPC_EVENTS.COMBAT_STARTED);
           setTimeout(() => {
-            WindowManager.safeSendToWindow(window, "refresh-ui");
+            WindowManager.safeSendToWindow(window, IPC_EVENTS.REFRESH_UI);
           }, 100);
         }
+      } else {
+        console.log(`[TRACKER MANAGER] Failed to get window for tracker ${trackerType}`);
       }
     }
 
-    // Créer mais cacher les trackers configurés pour être créés mais cachés
     for (const trackerType of autoCreateButHide) {
       const window = this.createTracker(character, trackerType);
       if (window && !window.isDestroyed()) {

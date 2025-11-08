@@ -1,6 +1,5 @@
 /**
  * Iop Jauge Tracker - Suivi visuel des boosts Iop avec SVG
- * Version modulaire - orchestration des différents modules
  */
 
 import { setupTrackerEventListeners } from "../../core/ui-helpers.js";
@@ -8,20 +7,15 @@ import { ResourceState } from "./core/resource-state.js";
 import { ResourceParsers } from "./parsers/resource-parsers.js";
 import { PostureParser } from "./parsers/posture-parser.js";
 import { SPELL_COST_MAP, DAMAGE_SPELLS } from "./config/spell-maps.js";
-
-// Note: Les modules UI et animations sont conservés dans ce fichier pour l'instant
-// car ils sont très spécifiques à l'implémentation SVG/Lottie d'Iop
-// Ils pourront être extraits plus tard si nécessaire
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 
 class IopJaugeTracker {
   private debugMode: boolean = false;
 
-  // Modules
   private state: ResourceState;
   private resourceParsers: ResourceParsers;
   private postureParser: PostureParser;
 
-  // SVG elements (conservés ici pour l'instant)
   private svgElement: SVGElement | null = null;
   private baseLayer: SVGGElement | null = null;
   private courrouxLayer: SVGGElement | null = null;
@@ -37,18 +31,15 @@ class IopJaugeTracker {
   private preparationLottieContainer: HTMLElement | null = null;
   private preparationLottieAnimation: any = null;
 
-  // Animation state for concentration fill
   private currentFillNormalized: number = 0;
   private targetFillNormalized: number = 0;
   private fillAnimationFrame: number | null = null;
   private concentrationFillRect: SVGRectElement | null = null;
 
   constructor() {
-    // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
 
-    // Initialiser les modules
     this.state = new ResourceState();
     this.resourceParsers = new ResourceParsers(this.state);
     this.postureParser = new PostureParser(this.state);
@@ -90,15 +81,11 @@ class IopJaugeTracker {
       },
       () => {
         this.state.setInCombat(true);
-        // Forcer une mise à jour complète de l'UI au début du combat
-        // Cela permet de s'assurer que tous les états (y compris le courroux) sont affichés
         setTimeout(() => {
           this.updateUI();
         }, 50);
       },
       () => {
-        // Forcer une mise à jour de l'UI quand demandé
-        // Utiliser un petit délai pour s'assurer que tous les états sont à jour
         setTimeout(() => {
           this.updateUI();
         }, 50);
@@ -114,7 +101,6 @@ class IopJaugeTracker {
   private processLogLine(line: string, parsed: any): void {
     let uiNeedsUpdate = false;
 
-    // Parse resource gains FIRST (before spell casts that might consume them)
     if (this.resourceParsers.parseConcentration(line)) {
       uiNeedsUpdate = true;
     }
@@ -138,12 +124,10 @@ class IopJaugeTracker {
       uiNeedsUpdate = true;
     }
 
-    // Parse Postures (must be before spell casts)
     if (this.postureParser.parse(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse spell consumption (after resource parsing to avoid resetting before gain)
     if (parsed.isSpellCast && parsed.spellCast) {
       if (
         this.resourceParsers.handleSpellCast(
@@ -156,7 +140,6 @@ class IopJaugeTracker {
       }
     }
 
-    // Parse damage dealt (for courroux deactivation) - must be after spell cast
     if (this.resourceParsers.parseDamageDealt(line)) {
       uiNeedsUpdate = true;
       if (this.debugMode) {
@@ -164,7 +147,6 @@ class IopJaugeTracker {
       }
     }
 
-    // Parse damage received (for posture deactivation)
     if (this.postureParser.parseDamage(line)) {
       uiNeedsUpdate = true;
     }
@@ -278,7 +260,6 @@ class IopJaugeTracker {
       return;
     }
 
-    // Retirer toutes les classes d'état du SVG
     const allClasses = [
       "inactive",
       "has-concentration",
@@ -290,7 +271,6 @@ class IopJaugeTracker {
 
     this.svgElement.classList.remove(...allClasses);
 
-    // Masquer toutes les couches d'état
     this.hideLayer(this.courrouxLayer);
     this.hideLayer(this.concentrationLayer);
     this.hideLayer(this.preparationLayer);
@@ -299,10 +279,8 @@ class IopJaugeTracker {
     this.hideLayer(this.postureDefenseLayer);
     this.hideLayer(this.postureVivaciteLayer);
 
-    // Retirer toutes les classes de niveau des couches
     this.removeLayerClasses(this.concentrationLayer, ["active"]);
 
-    // Si pas en combat, appliquer l'état inactif
     if (!this.state.getInCombat()) {
       this.svgElement.classList.add("inactive");
       return;
@@ -315,7 +293,6 @@ class IopJaugeTracker {
     const egare = this.state.getEgare();
     const activePosture = this.state.getActivePosture();
 
-    // Concentration pleine (bleue)
     if (concentration > 0 && this.concentrationLayer) {
       const postureSigil1 = this.svgElement.querySelector(
         ".posture-sigil1"
@@ -347,7 +324,6 @@ class IopJaugeTracker {
       }
     }
 
-    // Courroux
     if (this.debugMode) {
       console.log(`[IOP JAUGE] updateUI - courroux: ${courroux}, courrouxLayer: ${!!this.courrouxLayer}`);
     }
@@ -360,7 +336,6 @@ class IopJaugeTracker {
         console.log("[IOP JAUGE] Courroux activé, couche affichée");
       }
     } else {
-      // S'assurer que la couche est bien cachée et que la classe active est retirée
       if (this.courrouxLayer) {
         this.hideLayer(this.courrouxLayer);
         this.courrouxLayer.classList.remove("active");
@@ -371,7 +346,6 @@ class IopJaugeTracker {
       }
     }
 
-    // Préparation
     if (preparation && this.preparationLayer) {
       this.svgElement.classList.add("has-preparation");
       this.showLayer(this.preparationLayer);
@@ -381,17 +355,14 @@ class IopJaugeTracker {
       this.stopPreparationLottie();
     }
 
-    // Égaré
     if (egare && this.egareLayer) {
       this.svgElement.classList.add("has-egare");
       this.showLayer(this.egareLayer);
       this.egareLayer.classList.add("active");
     }
 
-    // Mettre à jour la vitesse des animations Lottie selon l'état Égaré
     this.updateLottieSpeed();
 
-    // Posture
     if (activePosture) {
       if (activePosture === "contre" && this.postureContreLayer) {
         this.showLayer(this.postureContreLayer);

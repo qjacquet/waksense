@@ -4,7 +4,7 @@
   "description": "Wakfu resource tracking overlay application",
   "main": "dist/main/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json && npm run copy-assets",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.main.json && tsc -p tsconfig.renderer.json && node scripts/reorganize-dist.js && npm run copy-assets",
     "build:watch": "tsc -p tsconfig.json --watch",
     "copy-assets": "node scripts/copy-assets.js",
     "start": "npm run build && electron dist/main/index.js",

@@ -5,6 +5,7 @@
 import activeWin from "active-win";
 import { Config } from "./config";
 import { WindowManager } from "../windows/window-manager";
+import { PATTERNS } from "../../shared/constants/patterns";
 
 export class WindowWatcher {
   private intervalId: NodeJS.Timeout | null = null;
@@ -66,8 +67,8 @@ export class WindowWatcher {
       const owner = window.owner?.name || "";
       
       const isWakfuWindow = 
-        title.toLowerCase().includes("wakfu") || 
-        owner.toLowerCase().includes("wakfu");
+        title.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD) || 
+        owner.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD);
 
       if (!isWakfuWindow) {
         return null;
@@ -136,8 +137,8 @@ export class WindowWatcher {
       const owner = window.owner?.name || "";
       
       const isWakfuWindow = 
-        title.toLowerCase().includes("wakfu") || 
-        owner.toLowerCase().includes("wakfu");
+        title.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD) || 
+        owner.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD);
 
       if (!isWakfuWindow) {
         return;

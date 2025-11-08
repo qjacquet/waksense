@@ -13,11 +13,11 @@ import { TirPrecisParser } from "./parsers/tir-precis-parser.js";
 import { SVGManager } from "./ui/svg-manager.js";
 import { UIUpdater } from "./ui/ui-updater.js";
 import { LottieManager } from "./animations/lottie-manager.js";
+import { PATTERNS } from "../../../shared/constants/patterns.js";
 
 class CraJaugeTracker {
   private debugMode: boolean = false;
 
-  // Modules
   private state: ResourceState;
   private affutageParser: AffutageParser;
   private precisionParser: PrecisionParser;
@@ -29,11 +29,9 @@ class CraJaugeTracker {
   private lottieManager: LottieManager;
 
   constructor() {
-    // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
-    this.debugMode = urlParams.get("debug") === "true";
+    this.debugMode = urlParams.get(PATTERNS.DEBUG_URL_PARAM) === "true";
 
-    // Initialiser les modules
     this.state = new ResourceState();
     this.affutageParser = new AffutageParser(this.state);
     this.precisionParser = new PrecisionParser(this.state);
@@ -44,10 +42,7 @@ class CraJaugeTracker {
     this.lottieManager = new LottieManager();
     this.uiUpdater = new UIUpdater(this.state, this.svgManager);
 
-    // Initialiser SVG
     this.svgManager.initialize();
-
-    // Setup event listeners
     this.setupEventListeners();
 
     if (this.debugMode) {
@@ -62,7 +57,6 @@ class CraJaugeTracker {
       (line: string, parsed: any) => this.processLogLine(line, parsed),
       () => this.resetResources(),
       () => {
-        // Au début du combat, s'assurer que la jauge est visible si elle a des valeurs
         this.uiUpdater.update();
       }
     );
@@ -76,40 +70,33 @@ class CraJaugeTracker {
   private processLogLine(line: string, parsed: any): void {
     let uiNeedsUpdate = false;
 
-    // Parse Affûtage (peut être dans ou hors combat)
     if (this.affutageParser.parse(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse Précision (peut être dans ou hors combat)
     if (this.precisionParser.parse(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Les autres parsers nécessitent des lignes de combat
-    if (!line.includes("[Information (combat)]")) {
+    if (!line.includes(PATTERNS.LOG_COMBAT_INFO)) {
       if (uiNeedsUpdate) {
         this.uiUpdater.update();
       }
       return;
     }
 
-    // Parse Pointe affûtée consumption
     if (this.stacksParser.parsePointeAffutee(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse Balise affûtée consumption
     if (this.stacksParser.parseBaliseAffutee(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse Flèche lumineuse
     if (this.stacksParser.parseFlecheLumineuse(line, parsed)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse Tir précis buff
     if (this.tirPrecisParser.parse(line)) {
       this.uiUpdater.updateTirPrecis(
         this.state.getTirPrecisActive(),
@@ -118,12 +105,10 @@ class CraJaugeTracker {
       uiNeedsUpdate = true;
     }
 
-    // Parse Précision buff removal
     if (this.precisionParser.parseBuffRemoval(line)) {
       uiNeedsUpdate = true;
     }
 
-    // Parse spell consumption with Tir précis active
     if (this.spellConsumptionParser.parse(line, parsed)) {
       uiNeedsUpdate = true;
     }

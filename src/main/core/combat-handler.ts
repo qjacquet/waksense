@@ -9,6 +9,8 @@ import { TrackerManager } from "./tracker-manager";
 import { WindowManager } from "../windows/window-manager";
 import { WindowWatcher } from "./window-watcher";
 import { getTrackerTypes } from "../../shared/domain/class-tracker-config";
+import { IPC_EVENTS } from "../../shared/constants/ipc-events";
+import { PATTERNS } from "../../shared/constants/patterns";
 
 export class CombatHandler {
   private static isCombatActive: boolean = false;
@@ -32,46 +34,43 @@ export class CombatHandler {
     logMonitor: any,
     windowWatcher: WindowWatcher | null
   ): void {
+    console.log("[COMBAT HANDLER] handleCombatStarted called", combatInfo);
     if (!combatInfo || !combatInfo.fighters) {
+      console.log("[COMBAT HANDLER] No combat info or fighters, returning");
       return;
     }
 
-    // Synchroniser les mappings avec logMonitor pour la détection de début de tour
     playerNameToFighterId.clear();
     fighterIdToFighter.clear();
 
-    // Détecter les combattants et mettre à jour la liste des personnages
     for (const fighter of combatInfo.fighters) {
       if (fighter.className) {
-        // Enregistrer la détection de classe
+        console.log(`[COMBAT HANDLER] Processing fighter: ${fighter.playerName} (${fighter.className})`);
         const key = `${fighter.className}_${fighter.playerName}`;
         detectedClasses.set(key, {
           className: fighter.className,
           playerName: fighter.playerName,
         });
 
-        // Synchroniser les mappings pour la détection de début de tour
         if (fighter.fighterId !== undefined) {
           playerNameToFighterId.set(fighter.playerName, fighter.fighterId);
           fighterIdToFighter.set(fighter.fighterId, fighter);
         }
 
-        // Notifier la détection de classe pour le launcher
-        WindowManager.safeSendToWindow(launcherWindow, "class-detected", {
+        WindowManager.safeSendToWindow(launcherWindow, IPC_EVENTS.CLASS_DETECTED, {
           className: fighter.className,
           playerName: fighter.playerName,
         });
 
+        console.log(`[COMBAT HANDLER] Creating tracker for ${fighter.playerName}`);
         this.createTrackerForFighter(fighter, launcherWindow);
       }
     }
 
-    // Synchroniser les mappings avec logMonitor pour qu'il puisse détecter le début de tour
     if (logMonitor) {
       logMonitor.syncFighterMappings(playerNameToFighterId, fighterIdToFighter);
     }
 
-    // Mettre à jour le WindowWatcher avec les personnages détectés en combat
     if (windowWatcher) {
       const detectedCharsMap = new Map<string, { className: string; playerName: string }>();
       for (const [key, detection] of detectedClasses.entries()) {
@@ -80,16 +79,14 @@ export class CombatHandler {
       windowWatcher.setDetectedCharacters(detectedCharsMap);
     }
 
-    WindowManager.safeSendToWindow(launcherWindow, "combat-started");
+    console.log("[COMBAT HANDLER] Sending combat-started event");
+    WindowManager.safeSendToWindow(launcherWindow, IPC_EVENTS.COMBAT_STARTED);
 
-    // Envoyer l'événement à toutes les fenêtres de trackers
-    this.broadcastToTrackers("combat-started");
+    this.broadcastToTrackers(IPC_EVENTS.COMBAT_STARTED);
 
-    // Marquer le combat comme actif
     this.isCombatActive = true;
+    console.log("[COMBAT HANDLER] Combat marked as active");
 
-    // Afficher les trackers du premier personnage détecté
-    // (celui qui a probablement lancé le combat)
     if (combatInfo.fighters && combatInfo.fighters.length > 0) {
       const firstFighter = combatInfo.fighters.find(f => f.className);
       if (firstFighter && firstFighter.className) {
@@ -97,10 +94,13 @@ export class CombatHandler {
           className: firstFighter.className,
           playerName: firstFighter.playerName,
         };
-        // Attendre un peu pour que les trackers soient créés
+        console.log(`[COMBAT HANDLER] Scheduling showTrackersOnTurnStart for ${character.playerName}`);
         setTimeout(() => {
           if (this.isCombatActive) {
+            console.log(`[COMBAT HANDLER] Calling showTrackersOnTurnStart for ${character.playerName}`);
             TrackerManager.showTrackersOnTurnStart(character);
+          } else {
+            console.log("[COMBAT HANDLER] Combat no longer active, skipping showTrackersOnTurnStart");
           }
         }, 200);
       }
@@ -131,31 +131,26 @@ export class CombatHandler {
       return;
     }
 
-    // Enregistrer la détection de classe
     const key = `${data.fighter.className}_${data.fighter.playerName}`;
     detectedClasses.set(key, {
       className: data.fighter.className,
       playerName: data.fighter.playerName,
     });
 
-    // Synchroniser les mappings pour la détection de début de tour
     if (data.fighter.fighterId !== undefined) {
       playerNameToFighterId.set(data.fighter.playerName, data.fighter.fighterId);
       fighterIdToFighter.set(data.fighter.fighterId, data.fighter);
     }
 
-    // Synchroniser les mappings avec logMonitor pour qu'il puisse détecter le début de tour
     if (logMonitor) {
       logMonitor.syncFighterMappings(playerNameToFighterId, fighterIdToFighter);
     }
 
-    // Notifier la détection de classe pour mettre à jour la liste
-    WindowManager.safeSendToWindow(launcherWindow, "class-detected", {
+    WindowManager.safeSendToWindow(launcherWindow, IPC_EVENTS.CLASS_DETECTED, {
       className: data.fighter.className,
       playerName: data.fighter.playerName,
     });
 
-    // Mettre à jour le WindowWatcher avec TOUS les personnages détectés (y compris le nouveau)
     if (windowWatcher) {
       const detectedCharsMap = new Map<string, { className: string; playerName: string }>();
       for (const [key, detection] of detectedClasses.entries()) {
@@ -167,9 +162,6 @@ export class CombatHandler {
     this.createTrackerForFighter(data.fighter, launcherWindow);
   }
 
-  /**
-   * Gère la fin d'un combat
-   */
   static handleCombatEnded(
     fightId: number | undefined,
     launcherWindow: BrowserWindow | null,
@@ -177,36 +169,28 @@ export class CombatHandler {
     playerNameToFighterId: Map<string, number>,
     fighterIdToFighter: Map<number, Fighter>
   ): void {
-    // Réactiver le WindowWatcher à la fin du combat (au cas où un tour serait encore actif)
     if (windowWatcher) {
       windowWatcher.setTurnActive(false);
     }
 
-    // Fermer automatiquement tous les trackers à la fin du combat
     this.closeAllTrackers();
 
-    // Réinitialiser les mappings
     playerNameToFighterId.clear();
     fighterIdToFighter.clear();
 
-    WindowManager.safeSendToWindow(launcherWindow, "combat-ended");
+    WindowManager.safeSendToWindow(launcherWindow, IPC_EVENTS.COMBAT_ENDED);
 
-    // Envoyer l'événement à toutes les fenêtres de trackers
-    this.broadcastToTrackers("combat-ended");
+    this.broadcastToTrackers(IPC_EVENTS.COMBAT_ENDED);
 
-    // Marquer le combat comme terminé
     this.isCombatActive = false;
   }
 
-  /**
-   * Crée un tracker pour un combattant
-   * Crée tous les trackers configurés pour cette classe et les cache par défaut
-   */
   private static createTrackerForFighter(
     fighter: Fighter,
     launcherWindow: BrowserWindow | null
   ): void {
     if (!fighter.className) {
+      console.log("[COMBAT HANDLER] No className for fighter, skipping tracker creation");
       return;
     }
 
@@ -215,24 +199,26 @@ export class CombatHandler {
       playerName: fighter.playerName,
     };
 
-    // Créer tous les trackers disponibles pour cette classe
     const trackerTypes = getTrackerTypes(fighter.className);
+    console.log(`[COMBAT HANDLER] Tracker types for ${fighter.className}:`, trackerTypes);
     
     for (const trackerType of trackerTypes) {
+      console.log(`[COMBAT HANDLER] Creating tracker ${trackerType} for ${fighter.playerName}`);
       const trackerWindow = TrackerManager.createTracker(character, trackerType);
 
       if (trackerWindow && !trackerWindow.isDestroyed()) {
-        // Cacher le tracker par défaut
+        console.log(`[COMBAT HANDLER] Tracker ${trackerType} created, hiding it`);
         trackerWindow.hide();
         trackerWindow.webContents.once("did-finish-load", () => {
           if (trackerWindow && !trackerWindow.isDestroyed()) {
+            console.log(`[COMBAT HANDLER] Tracker ${trackerType} finished loading, sending combat-started`);
             trackerWindow.hide();
-            WindowManager.safeSendToWindow(trackerWindow, "combat-started");
+            WindowManager.safeSendToWindow(trackerWindow, IPC_EVENTS.COMBAT_STARTED);
           }
         });
-        WindowManager.safeSendToWindow(trackerWindow, "combat-started");
+        WindowManager.safeSendToWindow(trackerWindow, IPC_EVENTS.COMBAT_STARTED);
       } else {
-        // Si le tracker existe déjà, envoyer l'événement
+        console.log(`[COMBAT HANDLER] Tracker ${trackerType} already exists or failed to create`);
         const trackerId = TrackerManager.getTrackerId(
           fighter.className,
           fighter.playerName,
@@ -240,31 +226,26 @@ export class CombatHandler {
         );
         const existingWindow = WindowManager.getWindow(trackerId);
         if (existingWindow && !existingWindow.isDestroyed()) {
-          WindowManager.safeSendToWindow(existingWindow, "combat-started");
+          console.log(`[COMBAT HANDLER] Sending combat-started to existing tracker ${trackerId}`);
+          WindowManager.safeSendToWindow(existingWindow, IPC_EVENTS.COMBAT_STARTED);
         }
       }
     }
   }
 
-  /**
-   * Ferme tous les trackers de combat
-   */
   private static closeAllTrackers(): void {
     const allWindows = WindowManager.getAllWindows();
     for (const [id, window] of allWindows) {
-      if (id.startsWith("tracker-")) {
+      if (id.startsWith(PATTERNS.TRACKER_ID_PREFIX)) {
         WindowManager.closeWindow(id);
       }
     }
   }
 
-  /**
-   * Envoie un événement à toutes les fenêtres de trackers
-   */
   private static broadcastToTrackers(channel: string): void {
     const trackerWindows = WindowManager.getAllWindows();
     trackerWindows.forEach((window, id) => {
-      if (id.startsWith("tracker-")) {
+      if (id.startsWith(PATTERNS.TRACKER_ID_PREFIX)) {
         WindowManager.safeSendToWindow(window, channel);
       }
     });

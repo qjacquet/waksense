@@ -2,13 +2,24 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/renderer",
-    "rootDir": "./src/renderer",
+    "rootDir": "./src",
     "module": "ES2020",
     "target": "ES2020",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": "./src",
+    "paths": {
+      "../../shared/*": ["shared/*"]
+    }
   },
   "include": [
-    "src/renderer/**/*"
+    "src/renderer/**/*",
+    "src/shared/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "src/main/**/*"
   ]
 }
 

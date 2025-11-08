@@ -15,8 +15,9 @@ import { WindowManager } from "./windows/window-manager";
 import { CombatHandler } from "./core/combat-handler";
 import { FighterMappings } from "./core/fighter-mappings";
 import { setupAssetsProtocol } from "./core/assets-protocol";
+import { IPC_EVENTS } from "../shared/constants/ipc-events";
+import { PATTERNS } from "../shared/constants/patterns";
 
-// Déclarer le protocole personnalisé comme privilégié AVANT app.whenReady()
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "assets",
@@ -31,11 +32,10 @@ protocol.registerSchemesAsPrivileged([
 
 let launcherWindow: BrowserWindow | null = null;
 let logMonitor: LogMonitor | null = null;
-let combatLogMonitor: LogMonitor | null = null; // LogMonitor pour wakfu.log (événements de combat)
+let combatLogMonitor: LogMonitor | null = null;
 let windowWatcher: WindowWatcher | null = null;
 
 const detectedClasses: Map<string, ClassDetection> = new Map();
-// Mapping partagé playerName -> fighterId pour la détection de début de tour
 const playerNameToFighterId: Map<string, number> = new Map();
 const fighterIdToFighter: Map<number, CombatStartInfo["fighters"][0]> =
   new Map();
@@ -47,12 +47,10 @@ function hideAllJauges(): void {
 function ensureLogMonitoring(): void {
   const logPath = Config.getLogPath() || Config.getDefaultLogPath();
 
-  // Surveiller wakfu_chat.log pour les sorts (détection de classes)
   if (!logMonitor) {
     startLogMonitoring(Config.getLogFilePath(logPath));
   }
 
-  // Surveiller wakfu.log pour les événements de combat
   if (!combatLogMonitor) {
     startCombatLogMonitoring(Config.getCombatLogFilePath(logPath));
   }
@@ -89,20 +87,16 @@ function createLauncherWindow(): void {
 }
 
 app.whenReady().then(() => {
-  // Enregistrer le handler du protocole personnalisé pour les assets
   setupAssetsProtocol();
 
   createLauncherWindow();
 
-  // Démarrer le surveillant de fenêtre pour détecter les changements de personnage
   windowWatcher = new WindowWatcher();
   
   windowWatcher.setOnCharacterChanged((character) => {
     hideAllJauges();
     
     if (character && CombatHandler.isInCombat()) {
-      // UN SEUL ENDROIT pour gérer l'affichage automatique des trackers
-      // Ne s'affiche que si on est en combat
       TrackerManager.showTrackersOnTurnStart(character);
     }
   });
@@ -120,12 +114,11 @@ app.whenReady().then(() => {
 
   if (launcherWindow) {
     launcherWindow.webContents.once("did-finish-load", () => {
-      // Envoyer les classes déjà détectées au launcher
       const alreadyDetected = Array.from(detectedClasses.values());
       for (const detection of alreadyDetected) {
         WindowManager.safeSendToWindow(
           launcherWindow,
-          "class-detected",
+          IPC_EVENTS.CLASS_DETECTED,
           detection
         );
       }
@@ -156,7 +149,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  // Arrêter le surveillant de fenêtre
   if (windowWatcher) {
     windowWatcher.stop();
     windowWatcher = null;
@@ -169,7 +161,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  // Arrêter le surveillant de fenêtre
   if (windowWatcher) {
     windowWatcher.stop();
     windowWatcher = null;
@@ -186,7 +177,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
 
   combatLogMonitor = new LogMonitor(logFilePath, true);
 
-  // Écouter uniquement les événements de combat (début/fin de combat)
   combatLogMonitor.on("combatStarted", (combatInfo?: CombatStartInfo) => {
     if (combatInfo) {
       CombatHandler.handleCombatStarted(
@@ -248,11 +238,8 @@ function startLogMonitoring(logFilePath: string): void {
     const key = `${detection.className}_${detection.playerName}`;
     detectedClasses.set(key, detection);
 
-    WindowManager.safeSendToWindow(launcherWindow, "class-detected", detection);
+    WindowManager.safeSendToWindow(launcherWindow, IPC_EVENTS.CLASS_DETECTED, detection);
   });
-
-  // Note: Les événements de combat (combatStarted, combatEnded) sont maintenant gérés par combatLogMonitor
-  // qui surveille wakfu.log. Ce logMonitor surveille wakfu_chat.log pour les sorts.
 
   logMonitor.on(
     "turnStarted",
@@ -269,7 +256,6 @@ function startLogMonitoring(logFilePath: string): void {
         className: data.fighter.className,
       };
 
-      // UN SEUL ENDROIT pour gérer l'affichage automatique des trackers
       TrackerManager.showTrackersOnTurnStart(activeCharacter);
 
       ensureLogMonitoring();
@@ -284,10 +270,10 @@ function startLogMonitoring(logFilePath: string): void {
     const trackerWindows = WindowManager.getAllWindows();
 
     trackerWindows.forEach((window, id) => {
-      if (id.startsWith("tracker-")) {
+      if (id.startsWith(PATTERNS.TRACKER_ID_PREFIX)) {
         const sent = WindowManager.safeSendToWindow(
           window,
-          "log-line",
+          IPC_EVENTS.LOG_LINE,
           line,
           parsed
         );
