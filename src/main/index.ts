@@ -216,17 +216,108 @@ app.whenReady().then(() => {
   windowWatcher = new WindowWatcher();
   
   windowWatcher.setOnCharacterChanged((character) => {
+    console.log("[WINDOW_WATCHER] Character changed callback triggered", character);
     hideAllJauges();
     
     if (character) {
+      console.log(`[WINDOW_WATCHER] Processing character: ${character.className} - ${character.playerName}`);
       const jaugeTrackerId = `tracker-${character.className}-${character.playerName}-jauge`;
-      const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+      console.log(`[WINDOW_WATCHER] Jauge tracker ID: ${jaugeTrackerId}`);
+      let jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
       
       if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+        console.log(`[WINDOW_WATCHER] Jauge window exists, showing it`);
         jaugeWindow.show();
         jaugeWindow.focus();
         WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+      } else if (!WindowManager.hasWindow(jaugeTrackerId)) {
+        console.log(`[WINDOW_WATCHER] Jauge window does not exist, checking if should create`);
+        // Créer la jauge si elle n'existe pas (pour CRA et IOP)
+        if (character.className === "Cra" || character.className === "Iop") {
+          console.log(`[WINDOW_WATCHER] Creating jauge for ${character.className}`);
+          const config = 
+            character.className === "Cra" 
+              ? { width: 300, height: 350, resizable: true, rendererName: "CRA JAUGE" }
+              : { width: 300, height: 300, resizable: true, rendererName: "IOP JAUGE" };
+
+          const newJaugeWindow = WindowManager.createTrackerWindow(
+            jaugeTrackerId,
+            "jauge.html",
+            character.className.toLowerCase(),
+            config
+          );
+
+          if (newJaugeWindow && !newJaugeWindow.isDestroyed()) {
+            console.log(`[WINDOW_WATCHER] Jauge window created successfully`);
+            newJaugeWindow.webContents.once("did-finish-load", () => {
+              if (newJaugeWindow && !newJaugeWindow.isDestroyed()) {
+                console.log(`[WINDOW_WATCHER] Jauge window loaded, showing it`);
+                newJaugeWindow.show();
+                newJaugeWindow.focus();
+                WindowManager.safeSendToWindow(newJaugeWindow, "combat-started");
+              }
+            });
+            newJaugeWindow.show();
+            newJaugeWindow.focus();
+          } else {
+            console.error(`[WINDOW_WATCHER] Failed to create jauge window`);
+          }
+        } else {
+          console.log(`[WINDOW_WATCHER] Character class ${character.className} does not need jauge`);
+        }
+      } else {
+        console.log(`[WINDOW_WATCHER] Jauge window exists but is destroyed or invalid`);
       }
+
+      // Pour IOP, afficher aussi le tracker de combos
+      if (character.className === "Iop") {
+        console.log(`[WINDOW_WATCHER] IOP detected, processing combos tracker`);
+        const combosTrackerId = `tracker-${character.className}-${character.playerName}-combos`;
+        console.log(`[WINDOW_WATCHER] Combos tracker ID: ${combosTrackerId}`);
+        let combosWindow = WindowManager.getWindow(combosTrackerId);
+        
+        if (combosWindow && !combosWindow.isDestroyed()) {
+          console.log(`[WINDOW_WATCHER] Combos window exists, showing it`);
+          combosWindow.show();
+          combosWindow.focus();
+          WindowManager.safeSendToWindow(combosWindow, "combat-started");
+        } else if (!WindowManager.hasWindow(combosTrackerId)) {
+          console.log(`[WINDOW_WATCHER] Combos window does not exist, creating it`);
+          combosWindow = WindowManager.createTrackerWindow(
+            combosTrackerId,
+            "combos.html",
+            "iop",
+            {
+              width: 240,
+              height: 180,
+              resizable: true,
+              rendererName: "IOP COMBOS",
+            }
+          );
+
+          if (combosWindow && !combosWindow.isDestroyed()) {
+            console.log(`[WINDOW_WATCHER] Combos window created successfully`);
+            combosWindow.webContents.once("did-finish-load", () => {
+              if (combosWindow && !combosWindow.isDestroyed()) {
+                console.log(`[WINDOW_WATCHER] Combos window loaded, showing it`);
+                combosWindow.show();
+                combosWindow.focus();
+                WindowManager.safeSendToWindow(combosWindow, "combat-started");
+              }
+            });
+            combosWindow.show();
+            combosWindow.focus();
+          } else {
+            console.error(`[WINDOW_WATCHER] Failed to create combos window`);
+          }
+        } else {
+          console.log(`[WINDOW_WATCHER] Combos window exists but is destroyed or invalid`);
+        }
+      } else {
+        console.log(`[WINDOW_WATCHER] Character is not IOP (className: ${character.className})`);
+      }
+    } else {
+      console.log(`[WINDOW_WATCHER] No character detected`);
     }
   });
   
@@ -311,15 +402,17 @@ function startCombatLogMonitoring(logFilePath: string): void {
 
   // Écouter uniquement les événements de combat (début/fin de combat)
   combatLogMonitor.on("combatStarted", (combatInfo?: CombatStartInfo) => {
+    console.log("[COMBAT_STARTED] Event received", combatInfo);
     if (combatInfo && combatInfo.fighters) {
+      console.log(`[COMBAT_STARTED] Found ${combatInfo.fighters.length} fighters`);
       // Ne plus masquer toutes les jauges au début du combat
       // Les jauges seront gérées par le WindowWatcher et les événements de tour
 
       // S'assurer que l'overlay existe et est visible avant de détecter les combattants
       if (!detectionOverlay || detectionOverlay.isDestroyed()) {
-        createDetectionOverlay();
+        //createDetectionOverlay();
       } else if (!detectionOverlay.isVisible()) {
-        detectionOverlay.show();
+        //detectionOverlay.show();
       }
 
       // Synchroniser les mappings avec logMonitor pour la détection de début de tour
@@ -407,7 +500,10 @@ function startCombatLogMonitoring(logFilePath: string): void {
         for (const [key, detection] of detectedClasses.entries()) {
           detectedCharsMap.set(key, detection);
         }
+        console.log("[COMBAT_STARTED] Setting detected characters in WindowWatcher:", Array.from(detectedCharsMap.values()));
         windowWatcher.setDetectedCharacters(detectedCharsMap);
+      } else {
+        console.log("[COMBAT_STARTED] WindowWatcher is null, cannot set detected characters");
       }
       
       // Afficher les jauges des personnages détectés au début du combat
@@ -449,9 +545,9 @@ function startCombatLogMonitoring(logFilePath: string): void {
       if (data.fighter.className) {
         // S'assurer que l'overlay existe et est visible
         if (!detectionOverlay || detectionOverlay.isDestroyed()) {
-          createDetectionOverlay();
+          //createDetectionOverlay();
         } else if (!detectionOverlay.isVisible()) {
-          detectionOverlay.show();
+          //detectionOverlay.show();
         }
 
         // Enregistrer la détection de classe
@@ -488,6 +584,50 @@ function startCombatLogMonitoring(logFilePath: string): void {
           className: data.fighter.className,
           playerName: data.fighter.playerName,
         });
+
+        // Mettre à jour le WindowWatcher avec TOUS les personnages détectés (y compris le nouveau)
+        if (windowWatcher) {
+          const detectedCharsMap = new Map<string, { className: string; playerName: string }>();
+          for (const [key, detection] of detectedClasses.entries()) {
+            detectedCharsMap.set(key, detection);
+          }
+          console.log("[FIGHTER_JOINED] Updating WindowWatcher with all detected characters:", Array.from(detectedCharsMap.values()));
+          windowWatcher.setDetectedCharacters(detectedCharsMap);
+        }
+
+        // Pour les personnages CRA et IOP : créer la jauge si elle n'existe pas
+        if (data.fighter.className === "Cra" || data.fighter.className === "Iop") {
+          const jaugeTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-jauge`;
+          
+          // Créer la jauge si elle n'existe pas
+          if (!WindowManager.hasWindow(jaugeTrackerId)) {
+            const config = data.fighter.className === "Cra" 
+              ? { width: 300, height: 350, resizable: true, rendererName: "CRA JAUGE" }
+              : { width: 300, height: 300, resizable: true, rendererName: "IOP JAUGE" };
+              
+            const jaugeWindow = WindowManager.createTrackerWindow(
+              jaugeTrackerId,
+              "jauge.html",
+              data.fighter.className.toLowerCase(),
+              config
+            );
+            
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+              jaugeWindow.webContents.once("did-finish-load", () => {
+                if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                  WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+                }
+              });
+              WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+            }
+          } else {
+            // Si la jauge existe déjà, envoyer l'événement
+            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+              WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+            }
+          }
+        }
       }
     }
   );
@@ -546,9 +686,9 @@ function startLogMonitoring(logFilePath: string): void {
         detection
       )
     ) {
-      createDetectionOverlay();
+      //createDetectionOverlay();
     } else if (detectionOverlay && !detectionOverlay.isVisible()) {
-      detectionOverlay.show();
+      //detectionOverlay.show();
     }
 
     WindowManager.safeSendToWindow(launcherWindow, "class-detected", detection);
@@ -563,7 +703,9 @@ function startLogMonitoring(logFilePath: string): void {
       fighterId: number;
       fighter: { playerName: string; className: string | null };
     }) => {
+      console.log("[TURN_STARTED] Event received", data);
       if (!data.fighter || !data.fighter.className) {
+        console.log("[TURN_STARTED] No fighter or className, returning");
         return;
       }
 
@@ -571,17 +713,21 @@ function startLogMonitoring(logFilePath: string): void {
         playerName: data.fighter.playerName,
         className: data.fighter.className,
       };
+      console.log(`[TURN_STARTED] Active character: ${activeCharacter.className} - ${activeCharacter.playerName}`);
 
       const jaugeTrackerId = `tracker-${activeCharacter.className}-${activeCharacter.playerName}-jauge`;
+      console.log(`[TURN_STARTED] Jauge tracker ID: ${jaugeTrackerId}`);
       
       const showJauge = () => {
         let jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
         
         if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+          console.log(`[TURN_STARTED] Jauge window exists, showing it`);
           jaugeWindow.show();
           jaugeWindow.focus();
           WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
         } else if (!WindowManager.hasWindow(jaugeTrackerId)) {
+          console.log(`[TURN_STARTED] Jauge window does not exist, checking config`);
           const config = 
             activeCharacter.className === "Cra" 
               ? { width: 300, height: 350, resizable: true, rendererName: "CRA JAUGE" }
@@ -589,7 +735,9 @@ function startLogMonitoring(logFilePath: string): void {
               ? { width: 300, height: 300, resizable: true, rendererName: "IOP JAUGE" }
               : null;
 
+          console.log(`[TURN_STARTED] Config for ${activeCharacter.className}:`, config);
           if (config) {
+            console.log(`[TURN_STARTED] Creating jauge window`);
             const newJaugeWindow = WindowManager.createTrackerWindow(
               jaugeTrackerId,
               "jauge.html",
@@ -598,8 +746,10 @@ function startLogMonitoring(logFilePath: string): void {
             );
 
             if (newJaugeWindow && !newJaugeWindow.isDestroyed()) {
+              console.log(`[TURN_STARTED] Jauge window created successfully`);
               newJaugeWindow.webContents.once("did-finish-load", () => {
                 if (newJaugeWindow && !newJaugeWindow.isDestroyed()) {
+                  console.log(`[TURN_STARTED] Jauge window loaded, showing it`);
                   newJaugeWindow.show();
                   newJaugeWindow.focus();
                   WindowManager.safeSendToWindow(newJaugeWindow, "combat-started");
@@ -607,16 +757,24 @@ function startLogMonitoring(logFilePath: string): void {
               });
               newJaugeWindow.show();
               newJaugeWindow.focus();
+            } else {
+              console.error(`[TURN_STARTED] Failed to create jauge window`);
             }
+          } else {
+            console.log(`[TURN_STARTED] No config for className: ${activeCharacter.className}`);
           }
+        } else {
+          console.log(`[TURN_STARTED] Jauge window exists but is destroyed or invalid`);
         }
       };
 
       // Appeler immédiatement (backup si WindowWatcher n'a pas déjà géré)
+      console.log(`[TURN_STARTED] Calling showJauge()`);
       showJauge();
 
       // Pour CRA, créer aussi le tracker s'il n'existe pas (mais ne pas l'afficher par défaut)
       if (activeCharacter.className === "Cra") {
+        console.log(`[TURN_STARTED] CRA detected, creating tracker (hidden)`);
         const trackerId = `tracker-${activeCharacter.className}-${activeCharacter.playerName}`;
         if (!WindowManager.hasWindow(trackerId)) {
           const trackerWindow = WindowManager.createTrackerWindow(
@@ -638,6 +796,54 @@ function startLogMonitoring(logFilePath: string): void {
             trackerWindow.hide();
           }
         }
+      }
+
+      // Pour IOP, créer et afficher aussi le tracker de combos
+      if (activeCharacter.className === "Iop") {
+        console.log(`[TURN_STARTED] IOP detected, processing combos tracker`);
+        const combosTrackerId = `tracker-${activeCharacter.className}-${activeCharacter.playerName}-combos`;
+        console.log(`[TURN_STARTED] Combos tracker ID: ${combosTrackerId}`);
+        let combosWindow = WindowManager.getWindow(combosTrackerId);
+        
+        if (combosWindow && !combosWindow.isDestroyed()) {
+          console.log(`[TURN_STARTED] Combos window exists, showing it`);
+          combosWindow.show();
+          combosWindow.focus();
+          WindowManager.safeSendToWindow(combosWindow, "combat-started");
+        } else if (!WindowManager.hasWindow(combosTrackerId)) {
+          console.log(`[TURN_STARTED] Combos window does not exist, creating it`);
+          combosWindow = WindowManager.createTrackerWindow(
+            combosTrackerId,
+            "combos.html",
+            "iop",
+            {
+              width: 240,
+              height: 180,
+              resizable: true,
+              rendererName: "IOP COMBOS",
+            }
+          );
+
+          if (combosWindow && !combosWindow.isDestroyed()) {
+            console.log(`[TURN_STARTED] Combos window created successfully`);
+            combosWindow.webContents.once("did-finish-load", () => {
+              if (combosWindow && !combosWindow.isDestroyed()) {
+                console.log(`[TURN_STARTED] Combos window loaded, showing it`);
+                combosWindow.show();
+                combosWindow.focus();
+                WindowManager.safeSendToWindow(combosWindow, "combat-started");
+              }
+            });
+            combosWindow.show();
+            combosWindow.focus();
+          } else {
+            console.error(`[TURN_STARTED] Failed to create combos window`);
+          }
+        } else {
+          console.log(`[TURN_STARTED] Combos window exists but is destroyed or invalid`);
+        }
+      } else {
+        console.log(`[TURN_STARTED] Character is not IOP (className: ${activeCharacter.className})`);
       }
 
       ensureLogMonitoring();
