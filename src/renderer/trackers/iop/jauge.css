@@ -26,6 +26,7 @@ body {
   justify-content: center;
   background: transparent;
   -webkit-app-region: drag;
+  cursor: move;
 }
 
 /* Conteneur Lottie pour l'effet courroux */
