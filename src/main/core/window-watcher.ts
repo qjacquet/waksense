@@ -9,7 +9,7 @@ import { WindowManager } from "../windows/window-manager";
 export class WindowWatcher {
   private intervalId: NodeJS.Timeout | null = null;
   private lastWindowTitle: string | null = null;
-  private checkInterval: number = 500;
+  private checkInterval: number = 300;
   private isTurnActive: boolean = false;
   private lastDetectedCharacter: { playerName: string; className: string } | null = null;
   private onCharacterChangedCallback: ((character: { playerName: string; className: string } | null) => void) | null = null;
@@ -47,9 +47,7 @@ export class WindowWatcher {
   }
 
   setDetectedCharacters(characters: Map<string, { className: string; playerName: string }>): void {
-    console.log("[WINDOW_WATCHER] setDetectedCharacters called with:", Array.from(characters.values()));
     this.detectedCharactersInCombat = characters;
-    console.log("[WINDOW_WATCHER] detectedCharactersInCombat now has", this.detectedCharactersInCombat.size, "characters");
   }
 
   setTurnActive(isActive: boolean): void {
@@ -87,15 +85,11 @@ export class WindowWatcher {
    */
   private extractCharacterFromTitle(title: string): { playerName: string; className: string } | null {
     const titleLower = title.toLowerCase();
-    console.log("[WINDOW_WATCHER] extractCharacterFromTitle - title:", title);
-    console.log("[WINDOW_WATCHER] extractCharacterFromTitle - detectedCharactersInCombat size:", this.detectedCharactersInCombat.size);
     
     for (const [key, detection] of this.detectedCharactersInCombat.entries()) {
       const playerNameLower = detection.playerName.toLowerCase();
-      console.log(`[WINDOW_WATCHER] Checking if title contains "${detection.playerName}" (${playerNameLower})`);
       
       if (titleLower.includes(playerNameLower)) {
-        console.log(`[WINDOW_WATCHER] Match found! Character: ${detection.className} - ${detection.playerName}`);
         Config.saveCharacter(detection.className, detection.playerName);
         return { playerName: detection.playerName, className: detection.className };
       }
