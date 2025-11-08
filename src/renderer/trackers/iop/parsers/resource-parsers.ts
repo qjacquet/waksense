@@ -162,16 +162,18 @@ export class ResourceParsers {
     }
 
     // Si le courroux est actif et que le dernier sort était un sort de 4 PA par le joueur tracké
+    // ET que la ligne contient "(Courroux)" entre parenthèses
     if (
       courroux &&
       lastSpellCaster === trackedPlayerName &&
-      lastSpellCost === "4PA"
+      lastSpellCost === "4PA" &&
+      line.includes("(Courroux)")
     ) {
       // Si des dégâts sont infligés à quelqu'un d'autre que le joueur tracké,
       // c'est que le joueur tracké a infligé ces dégâts (avec son sort de 4 PA)
       if (trackedPlayerName && targetName !== trackedPlayerName.trim()) {
         console.log(
-          `[IOP JAUGE] Dégâts infligés détectés (${targetName} reçoit ${damageMatch[2]} PV), désactivation du courroux`
+          `[IOP JAUGE] Dégâts infligés détectés avec Courroux (${targetName} reçoit ${damageMatch[2]} PV), désactivation du courroux`
         );
         this.state.setCourroux(false);
         return true;

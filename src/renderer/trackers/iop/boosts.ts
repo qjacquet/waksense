@@ -386,14 +386,16 @@ class IopBoostsTracker {
         
         // For courroux: check if damage is dealt by tracked player (not received)
         // Si le courroux est actif et que le dernier sort était un sort de 4 PA par le joueur tracké
+        // ET que la ligne contient "(Courroux)" entre parenthèses
         if (
           this.courroux &&
           this.lastSpellCaster === this.trackedPlayerName &&
           this.lastSpellCost === "4PA" &&
+          line.includes("(Courroux)") &&
           this.trackedPlayerName &&
           targetName !== this.trackedPlayerName.trim()
         ) {
-          console.log(`[IOP BOOSTS] Dégâts infligés détectés (${targetName} reçoit des dégâts), désactivation du courroux`);
+          console.log(`[IOP BOOSTS] Dégâts infligés détectés avec Courroux (${targetName} reçoit des dégâts), désactivation du courroux`);
           this.courroux = false;
           this.updateUI();
         }

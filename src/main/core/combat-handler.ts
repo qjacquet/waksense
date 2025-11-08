@@ -8,6 +8,7 @@ import { ClassDetection } from "./log-monitor";
 import { TrackerManager } from "./tracker-manager";
 import { WindowManager } from "../windows/window-manager";
 import { WindowWatcher } from "./window-watcher";
+import { getTrackerTypes } from "../../shared/domain/class-tracker-config";
 
 export class CombatHandler {
   /**
@@ -52,7 +53,6 @@ export class CombatHandler {
           playerName: fighter.playerName,
         });
 
-        // Créer la jauge si elle est configurée pour cette classe
         this.createTrackerForFighter(fighter, launcherWindow);
       }
     }
@@ -134,7 +134,6 @@ export class CombatHandler {
       windowWatcher.setDetectedCharacters(detectedCharsMap);
     }
 
-    // Créer la jauge si elle est configurée pour cette classe
     this.createTrackerForFighter(data.fighter, launcherWindow);
   }
 
@@ -168,6 +167,7 @@ export class CombatHandler {
 
   /**
    * Crée un tracker pour un combattant
+   * Crée tous les trackers configurés pour cette classe et les cache par défaut
    */
   private static createTrackerForFighter(
     fighter: Fighter,
@@ -177,33 +177,37 @@ export class CombatHandler {
       return;
     }
 
-    if (TrackerManager.hasTrackerType(fighter.className, "jauge")) {
-      const character = {
-        className: fighter.className,
-        playerName: fighter.playerName,
-      };
-      const jaugeWindow = TrackerManager.createTracker(character, "jauge");
+    const character = {
+      className: fighter.className,
+      playerName: fighter.playerName,
+    };
 
-      if (jaugeWindow && !jaugeWindow.isDestroyed()) {
-        // Cacher la jauge par défaut
-        jaugeWindow.hide();
-        jaugeWindow.webContents.once("did-finish-load", () => {
-          if (jaugeWindow && !jaugeWindow.isDestroyed()) {
-            jaugeWindow.hide();
-            WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+    // Créer tous les trackers disponibles pour cette classe
+    const trackerTypes = getTrackerTypes(fighter.className);
+    
+    for (const trackerType of trackerTypes) {
+      const trackerWindow = TrackerManager.createTracker(character, trackerType);
+
+      if (trackerWindow && !trackerWindow.isDestroyed()) {
+        // Cacher le tracker par défaut
+        trackerWindow.hide();
+        trackerWindow.webContents.once("did-finish-load", () => {
+          if (trackerWindow && !trackerWindow.isDestroyed()) {
+            trackerWindow.hide();
+            WindowManager.safeSendToWindow(trackerWindow, "combat-started");
           }
         });
-        WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+        WindowManager.safeSendToWindow(trackerWindow, "combat-started");
       } else {
-        // Si la jauge existe déjà, envoyer l'événement
-        const jaugeTrackerId = TrackerManager.getTrackerId(
+        // Si le tracker existe déjà, envoyer l'événement
+        const trackerId = TrackerManager.getTrackerId(
           fighter.className,
           fighter.playerName,
-          "jauge"
+          trackerType
         );
-        const existingJaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-        if (existingJaugeWindow && !existingJaugeWindow.isDestroyed()) {
-          WindowManager.safeSendToWindow(existingJaugeWindow, "combat-started");
+        const existingWindow = WindowManager.getWindow(trackerId);
+        if (existingWindow && !existingWindow.isDestroyed()) {
+          WindowManager.safeSendToWindow(existingWindow, "combat-started");
         }
       }
     }
