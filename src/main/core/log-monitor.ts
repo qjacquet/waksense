@@ -213,6 +213,22 @@ export class LogMonitor extends EventEmitter {
             }
           }
 
+          // Détection de la fin de tour : "secondes reportées pour le tour suivant"
+          if (trimmed.includes("secondes reportées pour le tour suivant")) {
+            // Émettre un événement de fin de tour
+            const fighter = this.lastSpellCasterFighterId 
+              ? this.fighterIdToFighter.get(this.lastSpellCasterFighterId) 
+              : null;
+            
+            this.emit('turnEnded', {
+              fighterId: this.lastSpellCasterFighterId,
+              fighter: fighter || null
+            });
+            
+            // Réinitialiser le dernier lanceur de sort pour détecter le prochain tour
+            this.lastSpellCasterFighterId = null;
+          }
+
           // Détection de la fin de combat
           if (LogParser.isCombatEnd(trimmed)) {
             const fightId = LogParser.parseCombatEnd(trimmed);

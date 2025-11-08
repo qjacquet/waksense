@@ -9,21 +9,24 @@ import { WindowManager } from "../windows/window-manager";
 export class WindowWatcher {
   private intervalId: NodeJS.Timeout | null = null;
   private lastWindowTitle: string | null = null;
-  private checkInterval: number = 500; // Vérifier toutes les 500ms
+  private checkInterval: number = 500;
+  private isTurnActive: boolean = false;
+  private lastDetectedCharacter: { playerName: string; className: string } | null = null;
+  private onCharacterChangedCallback: ((character: { playerName: string; className: string } | null) => void) | null = null;
+  private detectedCharactersInCombat: Map<string, { className: string; playerName: string }> = new Map();
 
   /**
    * Démarre la surveillance de la fenêtre active
    */
   start(): void {
     if (this.intervalId) {
-      return; // Déjà démarré
+      return;
     }
 
     this.intervalId = setInterval(() => {
       this.checkActiveWindow();
     }, this.checkInterval);
 
-    // Vérifier immédiatement
     this.checkActiveWindow();
   }
 
@@ -36,10 +39,90 @@ export class WindowWatcher {
       this.intervalId = null;
     }
     this.lastWindowTitle = null;
+    this.isTurnActive = false;
+  }
+
+  setOnCharacterChanged(callback: (character: { playerName: string; className: string } | null) => void): void {
+    this.onCharacterChangedCallback = callback;
+  }
+
+  setDetectedCharacters(characters: Map<string, { className: string; playerName: string }>): void {
+    this.detectedCharactersInCombat = characters;
+  }
+
+  setTurnActive(isActive: boolean): void {
+    this.isTurnActive = isActive;
+  }
+
+  async getActiveCharacter(): Promise<{ playerName: string; className: string } | null> {
+    try {
+      const window = await activeWin();
+      
+      if (!window) {
+        return null;
+      }
+
+      const title = window.title || "";
+      const owner = window.owner?.name || "";
+      
+      const isWakfuWindow = 
+        title.toLowerCase().includes("wakfu") || 
+        owner.toLowerCase().includes("wakfu");
+
+      if (!isWakfuWindow) {
+        return null;
+      }
+
+      return this.extractCharacterFromTitle(title);
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
-   * Vérifie la fenêtre active et extrait le nom du personnage
+   * Extrait le nom du personnage et la classe depuis le titre de la fenêtre
+   * Utilise d'abord les personnages détectés en combat, puis ceux sauvegardés
+   */
+  private extractCharacterFromTitle(title: string): { playerName: string; className: string } | null {
+    const titleLower = title.toLowerCase();
+    
+    for (const [key, detection] of this.detectedCharactersInCombat.entries()) {
+      const playerNameLower = detection.playerName.toLowerCase();
+      
+      if (titleLower.includes(playerNameLower)) {
+        Config.saveCharacter(detection.className, detection.playerName);
+        return { playerName: detection.playerName, className: detection.className };
+      }
+    }
+
+    const savedCharacters = Config.getSavedCharacters();
+    let activePlayerName: string | null = null;
+    let activeClassName: string | null = null;
+
+    for (const [className, playerNames] of Object.entries(savedCharacters)) {
+      for (const playerName of playerNames) {
+        const playerNameLower = playerName.toLowerCase();
+        
+        if (titleLower.includes(playerNameLower)) {
+          activePlayerName = playerName;
+          activeClassName = className;
+          break;
+        }
+      }
+      if (activePlayerName) {
+        break;
+      }
+    }
+
+    if (activePlayerName && activeClassName) {
+      return { playerName: activePlayerName, className: activeClassName };
+    }
+
+    return null;
+  }
+
+  /**
+   * Vérifie la fenêtre active et détecte les changements de personnage
    */
   private async checkActiveWindow(): Promise<void> {
     try {
@@ -49,11 +132,9 @@ export class WindowWatcher {
         return;
       }
 
-      // Vérifier si c'est une fenêtre Wakfu (peut contenir "Wakfu" dans le titre ou le nom de l'application)
       const title = window.title || "";
       const owner = window.owner?.name || "";
       
-      // Chercher si le titre contient "Wakfu" ou si l'application est Wakfu
       const isWakfuWindow = 
         title.toLowerCase().includes("wakfu") || 
         owner.toLowerCase().includes("wakfu");
@@ -62,89 +143,34 @@ export class WindowWatcher {
         return;
       }
 
-      // Si le titre a changé, vérifier s'il contient un nom de personnage
-      if (title !== this.lastWindowTitle) {
-        this.lastWindowTitle = title;
-        this.processWindowTitle(title);
+      const currentCharacter = this.extractCharacterFromTitle(title);
+      
+      if (currentCharacter) {
+        const hasChanged = 
+          !this.lastDetectedCharacter ||
+          this.lastDetectedCharacter.playerName !== currentCharacter.playerName ||
+          this.lastDetectedCharacter.className !== currentCharacter.className;
+        
+        if (hasChanged) {
+          this.lastDetectedCharacter = currentCharacter;
+          
+          if (this.onCharacterChangedCallback) {
+            this.onCharacterChangedCallback(currentCharacter);
+          }
+        }
+      } else {
+        if (this.lastDetectedCharacter) {
+          this.lastDetectedCharacter = null;
+          
+          if (this.onCharacterChangedCallback) {
+            this.onCharacterChangedCallback(null);
+          }
+        } else {
+          this.lastDetectedCharacter = null;
+        }
       }
     } catch (error) {
-      // Ignorer les erreurs silencieusement (peut arriver si on n'a pas les permissions)
-      // console.error("[WINDOW_WATCHER] Error checking active window:", error);
-    }
-  }
-
-  /**
-   * Traite le titre de la fenêtre pour extraire le nom du personnage
-   */
-  private processWindowTitle(title: string): void {
-    // Obtenir tous les personnages sauvegardés
-    const savedCharacters = Config.getSavedCharacters();
-    const craCharacters = savedCharacters["Cra"] || savedCharacters["cra"] || [];
-
-    if (craCharacters.length === 0) {
-      return; // Aucun personnage CRA sauvegardé
-    }
-
-    // Chercher si le titre contient un nom de personnage CRA
-    // Le titre peut avoir différents formats :
-    // - "Wakfu - NomDuPersonnage"
-    // - "NomDuPersonnage - Wakfu"
-    // - "NomDuPersonnage"
-    for (const playerName of craCharacters) {
-      // Vérifier si le titre contient le nom du personnage
-      // Utiliser une recherche insensible à la casse pour plus de robustesse
-      const titleLower = title.toLowerCase();
-      const playerNameLower = playerName.toLowerCase();
-      
-      if (titleLower.includes(playerNameLower)) {
-        // Afficher la jauge pour ce personnage
-        this.showCraJauge(playerName);
-        break; // Un seul personnage à la fois
-      }
-    }
-  }
-
-  /**
-   * Affiche la jauge CRA pour un personnage donné
-   */
-  private showCraJauge(playerName: string): void {
-    const jaugeTrackerId = `tracker-Cra-${playerName}-jauge`;
-    
-    // Vérifier si la jauge existe déjà
-    if (WindowManager.hasWindow(jaugeTrackerId)) {
-      const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-      if (jaugeWindow && !jaugeWindow.isDestroyed()) {
-        // S'assurer qu'elle est visible
-        if (!jaugeWindow.isVisible()) {
-          jaugeWindow.show();
-          jaugeWindow.focus();
-        }
-      }
-    } else {
-      // Créer la jauge si elle n'existe pas
-      const jaugeWindow = WindowManager.createTrackerWindow(
-        jaugeTrackerId,
-        "jauge.html",
-        "cra",
-        {
-          width: 300,
-          height: 350,
-          resizable: true,
-          rendererName: "CRA JAUGE",
-        }
-      );
-      
-      // S'assurer qu'elle est visible après le chargement
-      if (jaugeWindow && !jaugeWindow.isDestroyed()) {
-        jaugeWindow.webContents.once("did-finish-load", () => {
-          if (jaugeWindow && !jaugeWindow.isDestroyed()) {
-            jaugeWindow.show();
-            jaugeWindow.focus();
-          }
-        });
-        jaugeWindow.show();
-        jaugeWindow.focus();
-      }
+      // Ignorer les erreurs
     }
   }
 }

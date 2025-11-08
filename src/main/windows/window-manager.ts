@@ -228,8 +228,9 @@ export class WindowManager {
     window
       .loadFile(htmlPath)
       .then(() => {
-        window.show();
-        window.focus();
+        // NE PLUS afficher automatiquement - l'appelant décidera quand afficher
+        // window.show();
+        // window.focus();
       })
       .catch((error) => {
         console.error(
@@ -237,7 +238,8 @@ export class WindowManager {
         );
       });
 
-    window.show();
+    // NE PLUS afficher automatiquement - l'appelant décidera quand afficher
+    // window.show();
     return window;
   }
 
