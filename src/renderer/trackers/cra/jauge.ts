@@ -184,7 +184,11 @@ class CraJaugeTracker {
   private setupEventListeners(): void {
     setupTrackerEventListeners(
       (line: string, parsed: any) => this.processLogLine(line, parsed),
-      () => this.resetResources()
+      () => this.resetResources(),
+      () => {
+        // Au début du combat, s'assurer que la jauge est visible si elle a des valeurs
+        this.updateUI();
+      }
     );
   }
 

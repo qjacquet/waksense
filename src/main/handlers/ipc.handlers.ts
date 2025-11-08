@@ -38,6 +38,18 @@ export function setupIpcHandlers(
     }
   });
 
+  // Ajouter les nouveaux handlers pour CRA
+  const craHandlers = [
+    "toggle-cra-jauge",
+    "toggle-cra-tracker",
+  ];
+
+  craHandlers.forEach((handler) => {
+    if (ipcMain.listenerCount(handler) > 0) {
+      ipcMain.removeHandler(handler);
+    }
+  });
+
   // Personnages
   ipcMain.handle("get-saved-characters", () => {
     return Config.getSavedCharacters();
@@ -280,48 +292,11 @@ export function setupIpcHandlers(
         const trackerExists = WindowManager.hasWindow(trackerId);
         const jaugeExists = WindowManager.hasWindow(jaugeTrackerId);
 
-        if (jaugeExists) {
-          const trackerWindow = trackerExists
-            ? WindowManager.getWindow(trackerId)
-            : undefined;
-          const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-          const isCurrentlyVisible =
-            (jaugeWindow?.isVisible() ?? false) ||
-            (trackerWindow?.isVisible() ?? false);
-
-          if (isCurrentlyVisible) {
-            trackerWindow?.hide();
-            jaugeWindow?.hide();
-          } else {
-            trackerWindow?.show();
-            trackerWindow?.focus();
-            jaugeWindow?.show();
-            jaugeWindow?.focus();
-          }
-
-          return `${trackerId},${jaugeTrackerId}:${!isCurrentlyVisible}`;
-        }
-
+        // S'assurer que les deux fenêtres existent (createTrackerWindow ne crée pas de doublon)
         let trackerWindow: BrowserWindow | undefined;
         let jaugeWindow: BrowserWindow | undefined;
 
-        if (trackerExists) {
-          trackerWindow = WindowManager.getWindow(trackerId);
-          jaugeWindow = WindowManager.createTrackerWindow(
-            jaugeTrackerId,
-            "jauge.html",
-            "cra",
-            {
-              width: 300,
-              height: 350,
-              resizable: true,
-              rendererName: "CRA JAUGE",
-            }
-          );
-          if (trackerWindow?.isVisible()) {
-            jaugeWindow?.show();
-          }
-        } else {
+        if (!trackerExists) {
           trackerWindow = WindowManager.createTrackerWindow(
             trackerId,
             "index.html",
@@ -332,6 +307,11 @@ export function setupIpcHandlers(
               resizable: false,
             }
           );
+        } else {
+          trackerWindow = WindowManager.getWindow(trackerId);
+        }
+
+        if (!jaugeExists) {
           jaugeWindow = WindowManager.createTrackerWindow(
             jaugeTrackerId,
             "jauge.html",
@@ -343,6 +323,23 @@ export function setupIpcHandlers(
               rendererName: "CRA JAUGE",
             }
           );
+        } else {
+          jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+        }
+
+        // Toggle la visibilité des deux fenêtres
+        const isCurrentlyVisible =
+          (jaugeWindow?.isVisible() ?? false) ||
+          (trackerWindow?.isVisible() ?? false);
+
+        if (isCurrentlyVisible) {
+          trackerWindow?.hide();
+          jaugeWindow?.hide();
+        } else {
+          trackerWindow?.show();
+          trackerWindow?.focus();
+          jaugeWindow?.show();
+          jaugeWindow?.focus();
         }
 
         // Positionner manuellement uniquement si aucune position sauvegardée n'existe
@@ -353,7 +350,7 @@ export function setupIpcHandlers(
           !jaugeWindow.isDestroyed()
         ) {
           const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
-          if (!savedJaugePos) {
+          if (!savedJaugePos && !isCurrentlyVisible) {
             const trackerBounds = trackerWindow.getBounds();
             jaugeWindow.setPosition(
               trackerBounds.x + trackerBounds.width + 10,
@@ -364,14 +361,7 @@ export function setupIpcHandlers(
 
         ensureLogMonitoring();
 
-        const isVisible =
-          (jaugeWindow &&
-            !jaugeWindow.isDestroyed() &&
-            jaugeWindow.isVisible()) ||
-          (trackerWindow &&
-            !trackerWindow.isDestroyed() &&
-            trackerWindow.isVisible());
-        return `${trackerId},${jaugeTrackerId}:${isVisible}`;
+        return `${trackerId},${jaugeTrackerId}:${!isCurrentlyVisible}`;
       }
 
       const trackerId = `tracker-${className}-${playerName}`;
@@ -417,4 +407,62 @@ export function setupIpcHandlers(
   ipcMain.handle("open-debug", () => {
     WindowManager.createDebugWindow();
   });
+
+  // Handlers spécifiques pour CRA
+  ipcMain.handle(
+    "toggle-cra-jauge",
+    (_event, playerName: string) => {
+      const jaugeTrackerId = `tracker-cra-${playerName}-jauge`;
+      const jaugeExists = WindowManager.hasWindow(jaugeTrackerId);
+
+      if (!jaugeExists) {
+        // Créer la jauge si elle n'existe pas
+        const jaugeWindow = WindowManager.createTrackerWindow(
+          jaugeTrackerId,
+          "jauge.html",
+          "cra",
+          {
+            width: 300,
+            height: 350,
+            resizable: true,
+            rendererName: "CRA JAUGE",
+          }
+        );
+        ensureLogMonitoring();
+        return `${jaugeTrackerId}:true`;
+      }
+
+      const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+      const { result } = WindowManager.toggleWindow(jaugeWindow);
+      return `${jaugeTrackerId}:${result}`;
+    }
+  );
+
+  ipcMain.handle(
+    "toggle-cra-tracker",
+    (_event, playerName: string) => {
+      const trackerId = `tracker-cra-${playerName}`;
+      const trackerExists = WindowManager.hasWindow(trackerId);
+
+      if (!trackerExists) {
+        // Créer le tracker si il n'existe pas
+        const trackerWindow = WindowManager.createTrackerWindow(
+          trackerId,
+          "index.html",
+          "cra",
+          {
+            width: 320,
+            height: 200,
+            resizable: false,
+          }
+        );
+        ensureLogMonitoring();
+        return `${trackerId}:true`;
+      }
+
+      const trackerWindow = WindowManager.getWindow(trackerId);
+      const { result } = WindowManager.toggleWindow(trackerWindow);
+      return `${trackerId}:${result}`;
+    }
+  );
 }

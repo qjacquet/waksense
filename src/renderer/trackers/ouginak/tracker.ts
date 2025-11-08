@@ -171,7 +171,16 @@ class OuginakTracker {
   private setupEventListeners(): void {
     setupTrackerEventListeners(
       (line: string, parsed: any) => this.parseLogLine(line, parsed),
-      () => this.resetResources()
+      () => this.resetResources(),
+      () => {
+        // Au début du combat, mettre inCombat à true
+        this.inCombat = true;
+        // Si on a déjà un joueur tracké, afficher l'overlay
+        if (this.trackedPlayerName) {
+          this.overlayVisible = true;
+        }
+        this.updateUI();
+      }
     );
   }
 
@@ -213,7 +222,10 @@ class OuginakTracker {
 
     // Check for combat start
     if (line.includes("lance le sort")) {
-      this.inCombat = true;
+      // inCombat est déjà mis à true par onCombatStarted, mais on le met ici aussi pour sécurité
+      if (!this.inCombat) {
+        this.inCombat = true;
+      }
 
       // Extract player and spell info
       // Python regex: r'\[Information \(combat\)\] ([^:]+)[:\s]+lance le sort ([^(]+)'
@@ -256,6 +268,7 @@ class OuginakTracker {
           if (casterName === this.trackedPlayerName) {
             this.isOuginakTurn = true;
             this.overlayVisible = true;
+            this.inCombat = true; // S'assurer que inCombat est à true
             console.log(`[OUGINAK] Ouginak turn started - overlay shown for '${spellName}'`);
 
             // Add to timeline

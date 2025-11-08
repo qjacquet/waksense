@@ -100,4 +100,41 @@ html, body {
   border: 1px solid rgba(139, 69, 19, 0.6);
 }
 
+.cra-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  /* Désactiver le drag sur les options pour permettre les clics */
+  -webkit-app-region: no-drag;
+}
+
+.cra-option-button {
+  width: 100%;
+  min-height: 22px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: rgba(74, 158, 255, 0.2);
+  border: 1px solid rgba(74, 158, 255, 0.4);
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  text-align: left;
+  /* Désactiver le drag sur les boutons pour permettre les clics */
+  -webkit-app-region: no-drag;
+}
+
+.cra-option-button:hover {
+  background: rgba(74, 158, 255, 0.3);
+  border-color: rgba(74, 158, 255, 0.6);
+}
+
+.cra-option-button:active {
+  background: rgba(74, 158, 255, 0.4);
+}
+
 

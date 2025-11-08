@@ -42,6 +42,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Debug
   openDebug: () => ipcRenderer.invoke("open-debug"),
 
+  // Handlers spécifiques pour CRA
+  toggleCraJauge: (playerName: string) =>
+    ipcRenderer.invoke("toggle-cra-jauge", playerName),
+  toggleCraTracker: (playerName: string) =>
+    ipcRenderer.invoke("toggle-cra-tracker", playerName),
+
   // Événements du main process
   onClassDetected: (
     callback: (detection: { className: string; playerName: string }) => void
@@ -95,6 +101,8 @@ declare global {
       >;
       getAssetPath: (...pathSegments: string[]) => Promise<string>;
       openDebug: () => Promise<void>;
+      toggleCraJauge: (playerName: string) => Promise<string>;
+      toggleCraTracker: (playerName: string) => Promise<string>;
       onClassDetected: (
         callback: (detection: { className: string; playerName: string }) => void
       ) => void;

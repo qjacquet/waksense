@@ -8,6 +8,7 @@ import * as path from "path";
 import { CombatStartInfo } from "../shared/log/log-processor";
 import { Config } from "./core/config";
 import { ClassDetection, LogMonitor } from "./core/log-monitor";
+import { WindowWatcher } from "./core/window-watcher";
 import { setupIpcHandlers } from "./handlers/ipc.handlers";
 import { WindowManager } from "./windows/window-manager";
 
@@ -28,6 +29,7 @@ let launcherWindow: BrowserWindow | null = null;
 let detectionOverlay: BrowserWindow | null = null;
 let logMonitor: LogMonitor | null = null;
 let combatLogMonitor: LogMonitor | null = null; // LogMonitor pour wakfu.log (événements de combat)
+let windowWatcher: WindowWatcher | null = null;
 
 const detectedClasses: Map<string, ClassDetection> = new Map();
 // Mapping partagé playerName -> fighterId pour la détection de début de tour
@@ -198,6 +200,10 @@ app.whenReady().then(() => {
 
   createLauncherWindow();
 
+  // Démarrer le surveillant de fenêtre pour détecter le tour des personnages CRA
+  windowWatcher = new WindowWatcher();
+  windowWatcher.start();
+
   setupIpcHandlers(
     launcherWindow,
     () => logMonitor, // Passer une fonction qui retourne le logMonitor actuel
@@ -245,6 +251,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // Arrêter le surveillant de fenêtre
+  if (windowWatcher) {
+    windowWatcher.stop();
+    windowWatcher = null;
+  }
+  
   if (process.platform !== "darwin") {
     stopLogMonitoring();
     app.quit();
@@ -252,6 +264,12 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  // Arrêter le surveillant de fenêtre
+  if (windowWatcher) {
+    windowWatcher.stop();
+    windowWatcher = null;
+  }
+  
   stopLogMonitoring();
   WindowManager.closeAll();
 });
@@ -304,6 +322,50 @@ function startCombatLogMonitoring(logFilePath: string): void {
             className: fighter.className,
             playerName: fighter.playerName,
           });
+
+          // Pour les personnages CRA et IOP : créer et afficher la jauge immédiatement après l'initialisation
+          if (fighter.className === "Cra" || fighter.className === "Iop") {
+            const jaugeTrackerId = `tracker-${fighter.className}-${fighter.playerName}-jauge`;
+            
+            // Créer la jauge si elle n'existe pas
+            let jaugeWindow: BrowserWindow | undefined;
+            if (!WindowManager.hasWindow(jaugeTrackerId)) {
+              const config = fighter.className === "Cra" 
+                ? { width: 300, height: 350, resizable: true, rendererName: "CRA JAUGE" }
+                : { width: 300, height: 300, resizable: true, rendererName: "IOP JAUGE" };
+              
+              jaugeWindow = WindowManager.createTrackerWindow(
+                jaugeTrackerId,
+                "jauge.html",
+                fighter.className.toLowerCase(),
+                config
+              );
+              
+              // Attendre que le contenu soit chargé, puis afficher et déclencher le rendu
+              if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                jaugeWindow.webContents.once("did-finish-load", () => {
+                  if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                    jaugeWindow.show();
+                    jaugeWindow.focus();
+                    // Envoyer l'événement combat-started pour déclencher updateUI()
+                    WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+                  }
+                });
+                // Afficher immédiatement aussi (au cas où did-finish-load a déjà été déclenché)
+                jaugeWindow.show();
+                jaugeWindow.focus();
+              }
+            } else {
+              // Si la jauge existe déjà, s'assurer qu'elle est visible et rendue
+              jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+              if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                jaugeWindow.show();
+                jaugeWindow.focus();
+                // Envoyer l'événement pour déclencher le rendu
+                WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+              }
+            }
+          }
         }
       }
 
@@ -317,6 +379,14 @@ function startCombatLogMonitoring(logFilePath: string): void {
     }
 
     WindowManager.safeSendToWindow(launcherWindow, "combat-started");
+    
+    // Envoyer l'événement à toutes les fenêtres de trackers
+    const trackerWindows = WindowManager.getAllWindows();
+    trackerWindows.forEach((window, id) => {
+      if (id.startsWith("tracker-")) {
+        WindowManager.safeSendToWindow(window, "combat-started");
+      }
+    });
   });
 
   combatLogMonitor.on(
@@ -395,6 +465,14 @@ function startCombatLogMonitoring(logFilePath: string): void {
     }
 
     WindowManager.safeSendToWindow(launcherWindow, "combat-ended");
+    
+    // Envoyer l'événement à toutes les fenêtres de trackers
+    const trackerWindows = WindowManager.getAllWindows();
+    trackerWindows.forEach((window, id) => {
+      if (id.startsWith("tracker-")) {
+        WindowManager.safeSendToWindow(window, "combat-ended");
+      }
+    });
   });
 
   combatLogMonitor.start();
@@ -439,124 +517,14 @@ function startLogMonitoring(logFilePath: string): void {
       if (data.fighter && data.fighter.className) {
         const trackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}`;
 
-        // Gestion spéciale pour Iop (boosts + combos + jauge)
+        // Gestion spéciale pour Iop (jauge uniquement)
         if (data.fighter.className === "Iop") {
-          const boostsTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-boosts`;
-          const combosTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-combos`;
           const jaugeTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-jauge`;
 
-          // Si les trackers n'existent pas, les créer
-          if (!WindowManager.hasWindow(boostsTrackerId)) {
-            WindowManager.createTrackerWindow(
-              boostsTrackerId,
-              "boosts.html",
-              "iop",
-              {
-                width: 240,
-                height: 180,
-                resizable: true,
-                rendererName: "IOP BOOSTS",
-              }
-            );
-          } else {
-            const boostsWindow = WindowManager.getWindow(boostsTrackerId);
-            if (boostsWindow && !boostsWindow.isDestroyed()) {
-              boostsWindow.show();
-              boostsWindow.focus();
-            }
-            // Si boosts est affiché, afficher aussi combos et jauge s'ils existent
-            const combosWindow = WindowManager.getWindow(combosTrackerId);
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-            if (boostsWindow?.isVisible() && combosWindow && !combosWindow.isDestroyed()) {
-              combosWindow.show();
-              combosWindow.focus();
-            }
-            if (boostsWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
-              jaugeWindow.show();
-              jaugeWindow.focus();
-            }
-          }
-
-          if (!WindowManager.hasWindow(combosTrackerId)) {
-            const boostsWindow = WindowManager.getWindow(boostsTrackerId);
-            const combosWindow = WindowManager.createTrackerWindow(
-              combosTrackerId,
-              "combos.html",
-              "iop",
-              {
-                width: 240,
-                height: 180,
-                resizable: true,
-                rendererName: "IOP COMBOS",
-              }
-            );
-
-            // Positionner le combos à côté du boosts uniquement si aucune position sauvegardée
-            if (
-              boostsWindow &&
-              combosWindow &&
-              !boostsWindow.isDestroyed() &&
-              !combosWindow.isDestroyed()
-            ) {
-              const savedCombosPos = Config.getOverlayPosition(combosTrackerId);
-              if (!savedCombosPos) {
-                const boostsBounds = boostsWindow.getBounds();
-                combosWindow.setPosition(
-                  boostsBounds.x + boostsBounds.width + 10,
-                  boostsBounds.y
-                );
-              }
-            }
-
-            // Afficher le combos si boosts est visible
-            if (
-              boostsWindow?.isVisible() &&
-              combosWindow &&
-              !combosWindow.isDestroyed()
-            ) {
-              combosWindow.show();
-              combosWindow.focus();
-            }
-
-            // Si la jauge existe déjà, l'afficher aussi et la repositionner uniquement si aucune position sauvegardée
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-            if (
-              jaugeWindow &&
-              !jaugeWindow.isDestroyed() &&
-              combosWindow &&
-              !combosWindow.isDestroyed()
-            ) {
-              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
-              if (!savedJaugePos) {
-                const combosBounds = combosWindow.getBounds();
-                jaugeWindow.setPosition(
-                  combosBounds.x + combosBounds.width + 10,
-                  combosBounds.y
-                );
-              }
-              if (boostsWindow?.isVisible() || combosWindow.isVisible()) {
-                jaugeWindow.show();
-                jaugeWindow.focus();
-              }
-            }
-          } else {
-            const combosWindow = WindowManager.getWindow(combosTrackerId);
-            if (combosWindow && !combosWindow.isDestroyed()) {
-              combosWindow.show();
-              combosWindow.focus();
-            }
-            // Si combos est affiché, afficher aussi jauge si elle existe
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-            if (combosWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
-              jaugeWindow.show();
-              jaugeWindow.focus();
-            }
-          }
-
+          // Créer et afficher la jauge par défaut
+          let jaugeWindow: BrowserWindow | undefined;
           if (!WindowManager.hasWindow(jaugeTrackerId)) {
-            const combosWindow = WindowManager.getWindow(combosTrackerId);
-            const boostsWindow = WindowManager.getWindow(boostsTrackerId);
-            const jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeWindow = WindowManager.createTrackerWindow(
               jaugeTrackerId,
               "jauge.html",
               "iop",
@@ -567,74 +535,40 @@ function startLogMonitoring(logFilePath: string): void {
                 rendererName: "IOP JAUGE",
               }
             );
-
-            // Positionner la jauge à côté du combos uniquement si aucune position sauvegardée
-            if (
-              combosWindow &&
-              jaugeWindow &&
-              !combosWindow.isDestroyed() &&
-              !jaugeWindow.isDestroyed()
-            ) {
-              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
-              if (!savedJaugePos) {
-                const combosBounds = combosWindow.getBounds();
-                jaugeWindow.setPosition(
-                  combosBounds.x + combosBounds.width + 10,
-                  combosBounds.y
-                );
-              }
-            }
-
-            // Afficher la jauge si les autres trackers sont visibles
-            if (
-              (boostsWindow?.isVisible() || combosWindow?.isVisible()) &&
-              jaugeWindow &&
-              !jaugeWindow.isDestroyed()
-            ) {
+            // S'assurer que la jauge est visible après le chargement
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+              // Attendre que le contenu soit chargé avant d'afficher
+              jaugeWindow.webContents.once("did-finish-load", () => {
+                if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                  jaugeWindow.show();
+                  jaugeWindow.focus();
+                  // Envoyer l'événement combat-started au tracker
+                  WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+                }
+              });
+              // Afficher immédiatement aussi (au cas où did-finish-load a déjà été déclenché)
               jaugeWindow.show();
               jaugeWindow.focus();
             }
           } else {
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            // Si la jauge existe déjà, s'assurer qu'elle est visible
+            jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
             if (jaugeWindow && !jaugeWindow.isDestroyed()) {
               jaugeWindow.show();
               jaugeWindow.focus();
+              // Envoyer l'événement combat-started pour mettre à jour l'état
+              WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
             }
           }
         } else if (data.fighter.className === "Cra") {
-          // Gestion spéciale pour CRA (tracker + jauge)
+          // Gestion spéciale pour CRA (jauge par défaut, tracker optionnel)
           const trackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}`;
           const jaugeTrackerId = `tracker-${data.fighter.className}-${data.fighter.playerName}-jauge`;
 
-          // Si les trackers n'existent pas, les créer
-          if (!WindowManager.hasWindow(trackerId)) {
-            WindowManager.createTrackerWindow(
-              trackerId,
-              "index.html",
-              "cra",
-              {
-                width: 320,
-                height: 200,
-                resizable: false,
-              }
-            );
-          } else {
-            const trackerWindow = WindowManager.getWindow(trackerId);
-            if (trackerWindow && !trackerWindow.isDestroyed()) {
-              trackerWindow.show();
-              trackerWindow.focus();
-            }
-            // Si tracker est affiché, afficher aussi jauge si elle existe
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-            if (trackerWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
-              jaugeWindow.show();
-              jaugeWindow.focus();
-            }
-          }
-
+          // Créer et afficher la jauge par défaut
+          let jaugeWindow: BrowserWindow | undefined;
           if (!WindowManager.hasWindow(jaugeTrackerId)) {
-            const trackerWindow = WindowManager.getWindow(trackerId);
-            const jaugeWindow = WindowManager.createTrackerWindow(
+            jaugeWindow = WindowManager.createTrackerWindow(
               jaugeTrackerId,
               "jauge.html",
               "cra",
@@ -645,32 +579,53 @@ function startLogMonitoring(logFilePath: string): void {
                 rendererName: "CRA JAUGE",
               }
             );
-            // Positionner manuellement uniquement si aucune position sauvegardée n'existe
-            if (
-              trackerWindow &&
-              jaugeWindow &&
-              !trackerWindow.isDestroyed() &&
-              !jaugeWindow.isDestroyed()
-            ) {
-              const savedJaugePos = Config.getOverlayPosition(jaugeTrackerId);
-              if (!savedJaugePos) {
-                const trackerBounds = trackerWindow.getBounds();
-                jaugeWindow.setPosition(
-                  trackerBounds.x + trackerBounds.width + 10,
-                  trackerBounds.y
-                );
-              }
-            }
-            if (trackerWindow?.isVisible()) {
+            // S'assurer que la jauge est visible après le chargement
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+              // Attendre que le contenu soit chargé avant d'afficher
+              jaugeWindow.webContents.once("did-finish-load", () => {
+                if (jaugeWindow && !jaugeWindow.isDestroyed()) {
+                  jaugeWindow.show();
+                  jaugeWindow.focus();
+                  // Envoyer l'événement combat-started au tracker
+                  WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+                }
+              });
+              // Afficher immédiatement aussi (au cas où did-finish-load a déjà été déclenché)
               jaugeWindow.show();
               jaugeWindow.focus();
             }
           } else {
-            const trackerWindow = WindowManager.getWindow(trackerId);
-            const jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
-            if (trackerWindow?.isVisible() && jaugeWindow && !jaugeWindow.isDestroyed()) {
+            // Si la jauge existe déjà, s'assurer qu'elle est visible
+            jaugeWindow = WindowManager.getWindow(jaugeTrackerId);
+            if (jaugeWindow && !jaugeWindow.isDestroyed()) {
               jaugeWindow.show();
               jaugeWindow.focus();
+              // Envoyer l'événement combat-started pour mettre à jour l'état
+              WindowManager.safeSendToWindow(jaugeWindow, "combat-started");
+            }
+          }
+
+          // Créer le tracker s'il n'existe pas (mais ne pas l'afficher par défaut)
+          if (!WindowManager.hasWindow(trackerId)) {
+            const trackerWindow = WindowManager.createTrackerWindow(
+              trackerId,
+              "index.html",
+              "cra",
+              {
+                width: 320,
+                height: 200,
+                resizable: false,
+              }
+            );
+            // Cacher le tracker par défaut après le chargement
+            if (trackerWindow && !trackerWindow.isDestroyed()) {
+              trackerWindow.webContents.once("did-finish-load", () => {
+                if (trackerWindow && !trackerWindow.isDestroyed()) {
+                  trackerWindow.hide();
+                }
+              });
+              // Cacher immédiatement aussi
+              trackerWindow.hide();
             }
           }
         } else {

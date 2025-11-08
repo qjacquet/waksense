@@ -178,6 +178,7 @@ class IopJaugeTracker {
       },
       () => {
         this.inCombat = true;
+        this.updateUI();
       }
     );
   }
@@ -390,9 +391,12 @@ class IopJaugeTracker {
       return;
     }
 
-    // Initialize puissance on first spell cast in combat
+    // Initialize puissance on first spell cast if not already in combat
     if (!this.inCombat) {
       this.inCombat = true;
+    }
+    // Initialize puissance on first spell cast by tracked player
+    if (this.puissance === 0 && spellCast.playerName === this.trackedPlayerName) {
       this.puissance = 30;
       this.updateUI();
     }

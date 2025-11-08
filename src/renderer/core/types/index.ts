@@ -21,6 +21,8 @@ declare global {
       >;
       getAssetPath: (...pathSegments: string[]) => Promise<string>;
       openDebug: () => Promise<void>;
+      toggleCraJauge: (playerName: string) => Promise<string>;
+      toggleCraTracker: (playerName: string) => Promise<string>;
       onClassDetected: (
         callback: (detection: { className: string; playerName: string }) => void
       ) => void;

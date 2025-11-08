@@ -104,6 +104,35 @@ class DetectionOverlay {
     });
 
     container.appendChild(button);
+
+    // Ajouter les boutons spécifiques pour les personnages CRA
+    if (className === 'Cra') {
+      const optionsContainer = document.createElement('div');
+      optionsContainer.className = 'cra-options';
+
+      // Bouton "Afficher uniquement la jauge"
+      const jaugeButton = document.createElement('button');
+      jaugeButton.className = 'cra-option-button';
+      jaugeButton.innerHTML = '🎯 Afficher uniquement la jauge';
+      jaugeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleCraJauge(playerName);
+      });
+      optionsContainer.appendChild(jaugeButton);
+
+      // Bouton "Afficher uniquement le tracker"
+      const trackerButton = document.createElement('button');
+      trackerButton.className = 'cra-option-button';
+      trackerButton.innerHTML = '🔎 Afficher uniquement le tracker';
+      trackerButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleCraTracker(playerName);
+      });
+      optionsContainer.appendChild(trackerButton);
+
+      container.appendChild(optionsContainer);
+    }
+
     this.classesContainer.appendChild(container);
   }
 
@@ -114,6 +143,26 @@ class DetectionOverlay {
       }
     } catch (error) {
       console.error('[OVERLAY] Error launching tracker:', error);
+    }
+  }
+
+  private async toggleCraJauge(playerName: string): Promise<void> {
+    try {
+      if (window.electronAPI && window.electronAPI.toggleCraJauge) {
+        await window.electronAPI.toggleCraJauge(playerName);
+      }
+    } catch (error) {
+      console.error('[OVERLAY] Error toggling CRA jauge:', error);
+    }
+  }
+
+  private async toggleCraTracker(playerName: string): Promise<void> {
+    try {
+      if (window.electronAPI && window.electronAPI.toggleCraTracker) {
+        await window.electronAPI.toggleCraTracker(playerName);
+      }
+    } catch (error) {
+      console.error('[OVERLAY] Error toggling CRA tracker:', error);
     }
   }
 }

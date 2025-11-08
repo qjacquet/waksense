@@ -35,6 +35,7 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "active-win": "^8.2.1",
     "chokidar": "^3.5.3",
     "electron-store": "^8.1.0",
     "iconv-lite": "^0.6.3",
