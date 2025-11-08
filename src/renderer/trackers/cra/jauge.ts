@@ -1,184 +1,60 @@
 /**
  * Cra Jauge Tracker - Suivi visuel des ressources Cra avec SVG
- * Réutilise toute la logique de tracker.ts mais avec un visuel basé sur le SVG
+ * Version modulaire - orchestration des différents modules
  */
 
 import { setupTrackerEventListeners } from "../../core/ui-helpers.js";
+import { ResourceState } from "./core/resource-state.js";
+import { AffutageParser } from "./parsers/affutage-parser.js";
+import { PrecisionParser } from "./parsers/precision-parser.js";
+import { StacksParser } from "./parsers/stacks-parser.js";
+import { SpellConsumptionParser } from "./parsers/spell-consumption-parser.js";
+import { TirPrecisParser } from "./parsers/tir-precis-parser.js";
+import { SVGManager } from "./ui/svg-manager.js";
+import { UIUpdater } from "./ui/ui-updater.js";
+import { LottieManager } from "./animations/lottie-manager.js";
 
 class CraJaugeTracker {
-  private affutage: number = 0;
-  private precision: number = 0;
-  private pointeAffuteeStacks: number = 0;
-  private baliseAffuteeStacks: number = 0;
-  private flecheLumineuseStacks: number = 0;
-  private trackedPlayerName: string | null = null;
-  private tirPrecisActive: boolean = false;
-  private hasEspritAffute: boolean = false;
-  private precisionMax: number = 300;
-  private recentPrecisionGains: number[] = [];
-  private maxRecentGains: number = 5;
-
   private debugMode: boolean = false;
 
-  private svgElement: SVGElement | null = null;
-  private arcBaseLayer: SVGGElement | null = null;
-  private cibleBaseLayer: SVGGElement | null = null;
-  private affutageLayer: SVGGElement | null = null;
-  private precisionLayer: SVGGElement | null = null;
-  private baliseCounter: SVGGElement | null = null;
-  private pointeCounter: SVGGElement | null = null;
-  private flecheLumineuseCounter: SVGGElement | null = null;
-  private affutagePercentText: SVGTextElement | null = null;
-  private precisionPercentText: SVGTextElement | null = null;
-
-  private tirPrecisLottieContainer: HTMLElement | null = null;
-  private tirPrecisLottieAnimation: any = null;
-  private tirPrecisAnimationDirection: number = 1; // 1 = forward, -1 = backward
-  private tirPrecisRollbackHandler: (() => void) | null = null;
-
-  // Animation state for affutage fill (0..1)
-  private currentAffutageFillNormalized: number = 0;
-  private targetAffutageFillNormalized: number = 0;
-  private affutageFillAnimationFrame: number | null = null;
-  private affutageFillRect: SVGRectElement | null = null;
-
-  // Animation state for precision fill (0..1)
-  private currentPrecisionFillNormalized: number = 0;
-  private targetPrecisionFillNormalized: number = 0;
-  private precisionFillAnimationFrame: number | null = null;
-  private precisionFillRect: SVGRectElement | null = null;
-
-  private animateAffutageFillTo(target: number): void {
-    this.targetAffutageFillNormalized = Math.max(0, Math.min(1, target));
-    if (this.affutageFillAnimationFrame !== null) {
-      return; // already animating; the loop will pick up the new target
-    }
-    const step = () => {
-      const diff = this.targetAffutageFillNormalized - this.currentAffutageFillNormalized;
-      if (Math.abs(diff) < 0.002) {
-        this.currentAffutageFillNormalized = this.targetAffutageFillNormalized;
-      } else {
-        // ease towards target
-        this.currentAffutageFillNormalized += diff * 0.15;
-      }
-      
-      // Animer chaque path individuellement (comme les compteurs bâtons)
-      if (this.affutageLayer) {
-        const paths = this.affutageLayer.querySelectorAll<SVGPathElement>(".affutage-fill-path");
-        const totalPaths = paths.length;
-        paths.forEach((path, index) => {
-          // Chaque path représente une portion de la jauge
-          const pathThreshold = (index + 1) / totalPaths;
-          if (this.currentAffutageFillNormalized >= pathThreshold) {
-            path.classList.add("active");
-            path.setAttribute("opacity", "0.9");
-          } else {
-            path.classList.remove("active");
-            path.setAttribute("opacity", "0");
-          }
-        });
-      }
-      
-      // Mettre à jour la valeur pendant l'animation
-      if (this.affutagePercentText) {
-        const currentAffutageValue = Math.round(this.currentAffutageFillNormalized * 100);
-        this.affutagePercentText.textContent = `${currentAffutageValue}`;
-        if (currentAffutageValue > 0) {
-          this.affutagePercentText.setAttribute("opacity", "1");
-        }
-      }
-      if (this.currentAffutageFillNormalized !== this.targetAffutageFillNormalized) {
-        this.affutageFillAnimationFrame = requestAnimationFrame(step);
-      } else {
-        if (this.affutageFillAnimationFrame !== null) {
-          cancelAnimationFrame(this.affutageFillAnimationFrame);
-        }
-        this.affutageFillAnimationFrame = null;
-      }
-    };
-    this.affutageFillAnimationFrame = requestAnimationFrame(step);
-  }
-
-  private animatePrecisionFillTo(target: number): void {
-    this.targetPrecisionFillNormalized = Math.max(0, Math.min(1, target));
-    if (this.precisionFillAnimationFrame !== null) {
-      return; // already animating; the loop will pick up the new target
-    }
-    const step = () => {
-      const diff = this.targetPrecisionFillNormalized - this.currentPrecisionFillNormalized;
-      if (Math.abs(diff) < 0.002) {
-        this.currentPrecisionFillNormalized = this.targetPrecisionFillNormalized;
-      } else {
-        // ease towards target
-        this.currentPrecisionFillNormalized += diff * 0.15;
-      }
-      
-      // Animer chaque path individuellement (comme les compteurs bâtons)
-      if (this.precisionLayer) {
-        const paths = this.precisionLayer.querySelectorAll<SVGPathElement>(".precision-fill-path");
-        const totalPaths = paths.length;
-        paths.forEach((path, index) => {
-          // Chaque path représente une portion de la jauge
-          const pathThreshold = (index + 1) / totalPaths;
-          if (this.currentPrecisionFillNormalized >= pathThreshold) {
-            path.classList.add("active");
-            path.setAttribute("opacity", "0.9");
-          } else {
-            path.classList.remove("active");
-            path.setAttribute("opacity", "0");
-          }
-        });
-      }
-      
-      // Mettre à jour la valeur pendant l'animation
-      if (this.precisionPercentText) {
-        const currentPrecisionValue = Math.round(this.currentPrecisionFillNormalized * this.precisionMax);
-        this.precisionPercentText.textContent = `${currentPrecisionValue}`;
-        if (currentPrecisionValue > 0) {
-          this.precisionPercentText.setAttribute("opacity", "1");
-        }
-      }
-      if (this.currentPrecisionFillNormalized !== this.targetPrecisionFillNormalized) {
-        this.precisionFillAnimationFrame = requestAnimationFrame(step);
-      } else {
-        if (this.precisionFillAnimationFrame !== null) {
-          cancelAnimationFrame(this.precisionFillAnimationFrame);
-        }
-        this.precisionFillAnimationFrame = null;
-      }
-    };
-    this.precisionFillAnimationFrame = requestAnimationFrame(step);
-  }
+  // Modules
+  private state: ResourceState;
+  private affutageParser: AffutageParser;
+  private precisionParser: PrecisionParser;
+  private stacksParser: StacksParser;
+  private spellConsumptionParser: SpellConsumptionParser;
+  private tirPrecisParser: TirPrecisParser;
+  private svgManager: SVGManager;
+  private uiUpdater: UIUpdater;
+  private lottieManager: LottieManager;
 
   constructor() {
     // Détecter le mode debug
     const urlParams = new URLSearchParams(window.location.search);
     this.debugMode = urlParams.get("debug") === "true";
 
-    this.initializeSVG();
+    // Initialiser les modules
+    this.state = new ResourceState();
+    this.affutageParser = new AffutageParser(this.state);
+    this.precisionParser = new PrecisionParser(this.state);
+    this.stacksParser = new StacksParser(this.state);
+    this.spellConsumptionParser = new SpellConsumptionParser(this.state);
+    this.tirPrecisParser = new TirPrecisParser(this.state);
+    this.svgManager = new SVGManager();
+    this.lottieManager = new LottieManager();
+    this.uiUpdater = new UIUpdater(this.state, this.svgManager);
+
+    // Initialiser SVG
+    this.svgManager.initialize();
+
+    // Setup event listeners
     this.setupEventListeners();
+
     if (this.debugMode) {
       this.setupDebugMode();
     }
-    this.updateUI();
-  }
 
-  private initializeSVG(): void {
-    this.svgElement = document.querySelector<SVGElement>("#cra-logo-svg");
-    this.arcBaseLayer = document.querySelector<SVGGElement>("#arc-base-layer");
-    this.cibleBaseLayer = document.querySelector<SVGGElement>("#cible-base-layer");
-    this.affutageLayer = document.querySelector<SVGGElement>("#affutage-layer");
-    this.precisionLayer = document.querySelector<SVGGElement>("#precision-layer");
-    this.baliseCounter = document.querySelector<SVGGElement>("#balise-counter");
-    this.pointeCounter = document.querySelector<SVGGElement>("#pointe-counter");
-    this.flecheLumineuseCounter = document.querySelector<SVGGElement>("#fleche-lumineuse-counter");
-    this.affutagePercentText = document.querySelector<SVGTextElement>("#affutage-percent");
-    this.precisionPercentText = document.querySelector<SVGTextElement>("#precision-percent");
-    this.tirPrecisLottieContainer = document.getElementById("tir-precis-lottie-container");
-
-    if (!this.svgElement) {
-      console.error("[CRA JAUGE] SVG element not found");
-    }
+    this.uiUpdater.update();
   }
 
   private setupEventListeners(): void {
@@ -187,858 +63,128 @@ class CraJaugeTracker {
       () => this.resetResources(),
       () => {
         // Au début du combat, s'assurer que la jauge est visible si elle a des valeurs
-        this.updateUI();
+        this.uiUpdater.update();
       }
     );
   }
 
   private resetResources(): void {
-    this.affutage = 0;
-    this.precision = 0;
-    this.pointeAffuteeStacks = 0;
-    this.baliseAffuteeStacks = 0;
-    this.flecheLumineuseStacks = 0;
-    this.trackedPlayerName = null;
-    this.tirPrecisActive = false;
-    this.precisionMax = 300;
-    this.hasEspritAffute = false;
-    this.recentPrecisionGains = [];
-    this.updateUI();
+    this.state.reset();
+    this.uiUpdater.update();
   }
 
   private processLogLine(line: string, parsed: any): void {
+    let uiNeedsUpdate = false;
+
     // Parse Affûtage (peut être dans ou hors combat)
-    this.parseAffutage(line);
+    if (this.affutageParser.parse(line)) {
+      uiNeedsUpdate = true;
+    }
 
     // Parse Précision (peut être dans ou hors combat)
-    this.parsePrecision(line);
+    if (this.precisionParser.parse(line)) {
+      uiNeedsUpdate = true;
+    }
 
     // Les autres parsers nécessitent des lignes de combat
     if (!line.includes("[Information (combat)]")) {
+      if (uiNeedsUpdate) {
+        this.uiUpdater.update();
+      }
       return;
     }
 
     // Parse Pointe affûtée consumption
-    this.parsePointeAffutee(line);
+    if (this.stacksParser.parsePointeAffutee(line)) {
+      uiNeedsUpdate = true;
+    }
 
     // Parse Balise affûtée consumption
-    this.parseBaliseAffutee(line);
+    if (this.stacksParser.parseBaliseAffutee(line)) {
+      uiNeedsUpdate = true;
+    }
 
     // Parse Flèche lumineuse
-    this.parseFlecheLumineuse(line, parsed);
+    if (this.stacksParser.parseFlecheLumineuse(line, parsed)) {
+      uiNeedsUpdate = true;
+    }
 
     // Parse Tir précis buff
-    this.parseTirPrecis(line);
+    if (this.tirPrecisParser.parse(line)) {
+      this.uiUpdater.updateTirPrecis(
+        this.state.getTirPrecisActive(),
+        this.lottieManager
+      );
+      uiNeedsUpdate = true;
+    }
 
     // Parse Précision buff removal
-    this.parsePrecisionBuffRemoval(line);
+    if (this.precisionParser.parseBuffRemoval(line)) {
+      uiNeedsUpdate = true;
+    }
 
     // Parse spell consumption with Tir précis active
-    this.parseSpellConsumption(line, parsed);
-  }
-
-  private parseAffutage(line: string): void {
-    // Format: "Affûtage (+X Niv.)"
-    const match = line.match(/Affûtage\s*\(\+(\d+)\s*Niv\.\)/i);
-    if (match) {
-      const newAffutage = parseInt(match[1], 10);
-
-      // Handle Affûtage reaching 100+ - gain stacks and carry over excess
-      if (newAffutage >= 100) {
-        const stacksGained = Math.floor(newAffutage / 100);
-
-        // Gain Pointe affûtée stacks (max 3)
-        if (this.pointeAffuteeStacks < 3) {
-          const stacksToAdd = Math.min(
-            stacksGained,
-            3 - this.pointeAffuteeStacks
-          );
-          this.pointeAffuteeStacks += stacksToAdd;
-        }
-
-        // Gain Balise affûtée stacks (max 3)
-        if (this.baliseAffuteeStacks < 3) {
-          const stacksToAdd = Math.min(
-            stacksGained,
-            3 - this.baliseAffuteeStacks
-          );
-          this.baliseAffuteeStacks += stacksToAdd;
-        }
-
-        // Keep remainder (ex: 150 → 1 stack, 50 remaining)
-        this.affutage = newAffutage % 100;
-      } else {
-        this.affutage = newAffutage;
-      }
-
-      this.updateUI();
-    }
-  }
-
-  private parsePrecision(line: string): void {
-    // Format: "Précision (+X Niv.)"
-    const precisionMatch = line.match(/Précision\s*\(\+(\d+)\s*Niv\.\)/i);
-    if (precisionMatch) {
-      const newPrecision = parseInt(precisionMatch[1], 10);
-      this.precision = newPrecision;
-
-      // Check for "Esprit affûté" talent (limits precision to 200)
-      if (
-        line.includes("Valeur maximale de Précision atteinte !") &&
-        this.precision > 200
-      ) {
-        // Check if this was after a +300 gain (normal case - don't cap)
-        if (!this.wasRecent300Gain()) {
-          this.precision = 200;
-          this.precisionMax = 200;
-          this.hasEspritAffute = true;
-        }
-      } else {
-        // If precision exceeds max, cap it
-        if (this.precision > this.precisionMax) {
-          this.precision = this.precisionMax;
-        }
-      }
-
-      this.updateUI();
+    if (this.spellConsumptionParser.parse(line, parsed)) {
+      uiNeedsUpdate = true;
     }
 
-    // Track precision gains for talent detection
-    const gainMatch = line.match(/Précision.*?(\+?\d+)/i);
-    if (gainMatch && line.includes("+")) {
-      try {
-        const precisionGain = parseInt(gainMatch[1], 10);
-        this.storePrecisionGain(precisionGain);
-
-        // If gained > 200 without cap message, talent might be removed
-        if (
-          precisionGain > 200 &&
-          !line.includes("Valeur maximale de Précision atteinte !")
-        ) {
-          if (this.hasEspritAffute) {
-            this.hasEspritAffute = false;
-            this.precisionMax = 300;
-          }
-        }
-      } catch (e) {
-        // Ignore parse errors
-      }
+    if (uiNeedsUpdate) {
+      this.uiUpdater.update();
     }
-  }
-
-  private parsePointeAffutee(line: string): void {
-    if (line.includes("Consomme Pointe affûtée")) {
-      if (this.pointeAffuteeStacks > 0) {
-        this.pointeAffuteeStacks--;
-        this.updateUI();
-      }
-    }
-  }
-
-  private parseBaliseAffutee(line: string): void {
-    // Balise affûtée is consumed when specific spells are cast
-    if (line.includes("lance le sort")) {
-      if (
-        line.includes("Balise de destruction") ||
-        line.includes("Balise d'alignement") ||
-        line.includes("Balise de contact")
-      ) {
-        if (this.baliseAffuteeStacks > 0) {
-          this.baliseAffuteeStacks--;
-          this.updateUI();
-        }
-      }
-    }
-  }
-
-  private parseFlecheLumineuse(line: string, parsed: any): void {
-    // Chercher directement dans la ligne le pattern ": Flèche lumineuse (+x Niv.) (Archer Futé)"
-    // Pattern: ": Flèche lumineuse (+x Niv.) (Archer Futé)" où x est entre 1 et 5
-    const flecheLumineuseMatch = line.match(/:\s*Flèche lumineuse\s*\(\+(\d+)\s*Niv\.\)\s*\(Archer Futé\)/i);
-    
-    if (flecheLumineuseMatch) {
-      const increment = parseInt(flecheLumineuseMatch[1], 10);
-      
-      // Vérifier que le nombre est entre 1 et 5
-      if (increment >= 1 && increment <= 5) {
-        // Détecter le nom du personnage depuis les messages de combat
-        if (parsed.isSpellCast && parsed.spellCast) {
-          const playerName = parsed.spellCast.playerName;
-          
-          // Stocker le nom du personnage si on détecte un sort de Cra
-          if (!this.trackedPlayerName) {
-            const spellName = parsed.spellCast.spellName;
-            // Détecter si c'est un sort de Cra pour identifier le personnage
-            const craSpells = [
-              "Flèche", "Balise", "Tir", "Arc", "Cible"
-            ];
-            if (spellName && craSpells.some(spell => spellName.includes(spell))) {
-              this.trackedPlayerName = playerName;
-            }
-          }
-          
-          // Vérifier si c'est notre personnage
-          if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
-            this.flecheLumineuseStacks = Math.min(5, increment);
-            this.updateUI();
-          }
-        } else {
-          // Si on ne peut pas identifier le joueur via spellCast, on peut quand même écraser la valeur
-          // en se basant uniquement sur le pattern dans la ligne
-          this.flecheLumineuseStacks = Math.min(5, increment);
-            this.updateUI();
-        }
-      }
-    } else {
-      // Vérifier si c'est une consommation de flèche lumineuse (pas de pattern "+x Niv.")
-      // On cherche un message de sort lancé avec "Flèche lumineuse" mais sans le pattern d'incrément
-      if (parsed.isSpellCast && parsed.spellCast) {
-        const playerName = parsed.spellCast.playerName;
-        const spellName = parsed.spellCast.spellName;
-        
-        // Stocker le nom du personnage si on détecte un sort de Cra
-        if (spellName && !this.trackedPlayerName) {
-          const craSpells = [
-            "Flèche", "Balise", "Tir", "Arc", "Cible"
-          ];
-          if (craSpells.some(spell => spellName.includes(spell))) {
-            this.trackedPlayerName = playerName;
-          }
-        }
-        
-        // Si c'est "Flèche lumineuse" sans le pattern d'incrément, c'est une consommation
-        if (spellName && spellName.includes("Flèche lumineuse") && 
-            !line.match(/:\s*Flèche lumineuse\s*\(\+\d+\s*Niv\.\)/i)) {
-          if (this.trackedPlayerName && playerName === this.trackedPlayerName) {
-            if (this.flecheLumineuseStacks > 0) {
-              this.flecheLumineuseStacks--;
-              this.updateUI();
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private parseTirPrecis(line: string): void {
-    // Parse Tir précis buff activation
-    if (line.includes("Tir précis (Niv.")) {
-      this.tirPrecisActive = true;
-      this.updateUI();
-    }
-    // Parse Tir précis buff removal
-    else if (line.includes("n'est plus sous l'emprise de 'Tir précis'")) {
-      this.tirPrecisActive = false;
-      this.updateUI();
-    }
-  }
-
-  private parsePrecisionBuffRemoval(line: string): void {
-    // Parse Précision buff removal - reset precision to 0
-    if (line.includes("n'est plus sous l'emprise de 'Précision'")) {
-      this.precision = 0;
-      // Reset bar maximum back to 300 for normal operation
-      this.precisionMax = 300;
-      this.hasEspritAffute = false;
-      this.updateUI();
-    }
-  }
-
-  private parseSpellConsumption(line: string, parsed: any): void {
-    // Parse spell consumption with Tir précis active
-    if (this.tirPrecisActive && parsed.isSpellCast && parsed.spellCast) {
-      const spellName = parsed.spellCast.spellName;
-      let spellConsumption = 0;
-
-      // Spell consumption values
-      const consumptionMap: { [key: string]: number } = {
-        "Flèche criblante": 60,
-        "Flèche fulminante": 45,
-        "Flèche d'immolation": 30,
-        "Flèche enflammée": 60,
-        "Flèche ardente": 30,
-        "Flèche Ardente": 30,
-        "Pluie de flèches": 60,
-        "Pluie de fleches": 60,
-        "Flèche explosive": 90,
-        "Flèche cinglante": 45,
-        "Flèche perçante": 75,
-        "Flèche destructrice": 105,
-        "Flèche chercheuse": 30,
-        "Flèche de recul": 60,
-        "Flèche tempête": 45,
-        "Flèche harcelante": 45,
-        "Flèche statique": 90,
-      };
-
-      for (const [spell, cost] of Object.entries(consumptionMap)) {
-        if (spellName.includes(spell)) {
-          spellConsumption = cost;
-          break;
-        }
-      }
-
-      if (spellConsumption > 0) {
-        this.precision = Math.max(this.precision - spellConsumption, 0);
-        this.updateUI();
-      }
-    }
-  }
-
-  private storePrecisionGain(gainValue: number): void {
-    this.recentPrecisionGains.push(gainValue);
-    // Keep only the last N gains
-    if (this.recentPrecisionGains.length > this.maxRecentGains) {
-      this.recentPrecisionGains.shift();
-    }
-  }
-
-  private wasRecent300Gain(): boolean {
-    if (this.recentPrecisionGains.length === 0) {
-      return false;
-    }
-    return (
-      this.recentPrecisionGains[this.recentPrecisionGains.length - 1] === 300
-    );
   }
 
   private setupDebugMode(): void {
     window.addEventListener("message", (event) => {
       if (event.data.type === "debug-init") {
-        // Initialiser avec toutes les valeurs
         const values = event.data.values;
         if (values.affutage !== undefined)
-          this.affutage = Number(values.affutage);
+          this.state.setAffutage(Number(values.affutage));
         if (values.precision !== undefined)
-          this.precision = Number(values.precision);
+          this.state.setPrecision(Number(values.precision));
         if (values.precisionMax !== undefined)
-          this.precisionMax = Number(values.precisionMax);
+          this.state.setPrecisionMax(Number(values.precisionMax));
         if (values.tirPrecisActive !== undefined) {
-          this.tirPrecisActive = Boolean(values.tirPrecisActive);
+          this.state.setTirPrecisActive(Boolean(values.tirPrecisActive));
         }
         if (values.baliseAffuteeStacks !== undefined)
-          this.baliseAffuteeStacks = Number(values.baliseAffuteeStacks);
+          this.state.setBaliseAffuteeStacks(Number(values.baliseAffuteeStacks));
         if (values.pointeAffuteeStacks !== undefined)
-          this.pointeAffuteeStacks = Number(values.pointeAffuteeStacks);
+          this.state.setPointeAffuteeStacks(Number(values.pointeAffuteeStacks));
         if (values.flecheLumineuseStacks !== undefined)
-          this.flecheLumineuseStacks = Number(values.flecheLumineuseStacks);
-        this.updateUI();
+          this.state.setFlecheLumineuseStacks(Number(values.flecheLumineuseStacks));
+        this.uiUpdater.update();
       } else if (event.data.type === "debug-update") {
-        // Mettre à jour une valeur spécifique
         const { key, value } = event.data;
         switch (key) {
           case "affutage":
-            this.affutage = Number(value);
+            this.state.setAffutage(Number(value));
             break;
           case "precision":
-            this.precision = Number(value);
+            this.state.setPrecision(Number(value));
             break;
           case "precisionMax":
-            this.precisionMax = Number(value);
+            this.state.setPrecisionMax(Number(value));
             break;
           case "tirPrecisActive":
-            this.tirPrecisActive = Boolean(value);
+            this.state.setTirPrecisActive(Boolean(value));
+            this.uiUpdater.updateTirPrecis(
+              this.state.getTirPrecisActive(),
+              this.lottieManager
+            );
             break;
           case "baliseAffuteeStacks":
-            this.baliseAffuteeStacks = Number(value);
+            this.state.setBaliseAffuteeStacks(Number(value));
             break;
           case "pointeAffuteeStacks":
-            this.pointeAffuteeStacks = Number(value);
+            this.state.setPointeAffuteeStacks(Number(value));
             break;
           case "flecheLumineuseStacks":
-            this.flecheLumineuseStacks = Number(value);
+            this.state.setFlecheLumineuseStacks(Number(value));
             break;
         }
-        this.updateUI();
+        this.uiUpdater.update();
       }
     });
-  }
-
-  private updateUI(): void {
-    if (!this.svgElement) {
-      return;
-    }
-
-    // Retirer toutes les classes d'état du SVG
-    const allClasses = [
-      "inactive",
-      "has-affutage",
-      "has-precision",
-      "has-tir-precis",
-      "has-fleche-lumineuse",
-    ];
-
-    this.svgElement.classList.remove(...allClasses);
-
-    // Masquer toutes les couches d'état
-    this.hideLayer(this.affutageLayer);
-    this.hideLayer(this.precisionLayer);
-
-    // Retirer toutes les classes actives des couches
-    this.removeLayerClasses(this.affutageLayer, ["active"]);
-    this.removeLayerClasses(this.precisionLayer, ["active"]);
-
-    // Affûtage (Arc)
-    if (this.affutage > 0 && this.affutageLayer) {
-      this.svgElement.classList.add("has-affutage");
-      this.showLayer(this.affutageLayer);
-      this.affutageLayer.classList.add("active");
-      const normalizedAffutage = Math.min(this.affutage / 100, 1);
-      this.animateAffutageFillTo(normalizedAffutage);
-      // Afficher la valeur
-      if (this.affutagePercentText) {
-        this.affutagePercentText.textContent = `${this.affutage}`;
-        this.affutagePercentText.setAttribute("opacity", "1");
-      }
-    } else if (this.affutageLayer) {
-      this.hideLayer(this.affutageLayer);
-      this.affutageLayer.classList.remove("active");
-      // Stopper l'animation et réinitialiser
-      this.targetAffutageFillNormalized = 0;
-      this.currentAffutageFillNormalized = 0;
-      // Réinitialiser l'opacité de tous les paths
-      if (this.affutageLayer) {
-        const paths = this.affutageLayer.querySelectorAll<SVGPathElement>(".affutage-fill-path");
-        paths.forEach((path) => {
-          path.setAttribute("opacity", "0");
-        });
-      }
-      // Masquer le pourcentage
-      if (this.affutagePercentText) {
-        this.affutagePercentText.setAttribute("opacity", "0");
-      }
-    }
-
-    // Précision (Cible)
-    if (this.precision > 0 && this.precisionLayer) {
-      this.svgElement.classList.add("has-precision");
-      this.showLayer(this.precisionLayer);
-      this.precisionLayer.classList.add("active");
-      const normalizedPrecision = Math.min(this.precision / this.precisionMax, 1);
-      this.animatePrecisionFillTo(normalizedPrecision);
-      // Afficher la valeur
-      if (this.precisionPercentText) {
-        this.precisionPercentText.textContent = `${this.precision}`;
-        this.precisionPercentText.setAttribute("opacity", "1");
-      }
-    } else if (this.precisionLayer) {
-      this.hideLayer(this.precisionLayer);
-      this.precisionLayer.classList.remove("active");
-      // Stopper l'animation et réinitialiser
-      this.targetPrecisionFillNormalized = 0;
-      this.currentPrecisionFillNormalized = 0;
-      // Réinitialiser l'opacité de tous les paths
-      if (this.precisionLayer) {
-        const paths = this.precisionLayer.querySelectorAll<SVGPathElement>(".precision-fill-path");
-        paths.forEach((path) => {
-          path.setAttribute("opacity", "0");
-        });
-      }
-      // Masquer le pourcentage
-      if (this.precisionPercentText) {
-        this.precisionPercentText.setAttribute("opacity", "0");
-      }
-    }
-
-    // Tir précis
-    if (this.tirPrecisActive) {
-      this.svgElement.classList.add("has-tir-precis");
-      // Charger l'animation Lottie
-      this.loadTirPrecisLottie();
-    } else {
-      // Arrêter et cacher l'animation Lottie
-      this.stopTirPrecisLottie();
-    }
-
-    // Mettre à jour les compteurs de stacks
-    this.updateStackCounters();
-    this.updateFlecheLumineuseCounter();
-    
-    // Colorer la pointe de la flèche en doré si des flèches lumineuses sont disponibles
-    if (this.flecheLumineuseStacks > 0) {
-      this.svgElement.classList.add("has-fleche-lumineuse");
-    }
-  }
-
-  private updateFlecheLumineuseCounter(): void {
-    // Mettre à jour le compteur de flèches lumineuses (affichage points)
-    if (this.flecheLumineuseCounter) {
-      // Masquer le compteur si on a 0 stack
-      if (this.flecheLumineuseStacks === 0) {
-        this.flecheLumineuseCounter.setAttribute("opacity", "0");
-        return;
-      }
-      
-      // Afficher le compteur si on a au moins 1 stack
-      this.flecheLumineuseCounter.setAttribute("opacity", "1");
-      
-      const arrows = this.flecheLumineuseCounter.querySelectorAll<SVGGElement>(".stack-arrow");
-      const maxArrows = 5; // Limite à 5
-      const currentStacks = Math.min(this.flecheLumineuseStacks, 5); // S'assurer qu'on ne dépasse pas 5
-      
-      // Afficher les points actifs selon le nombre de stacks (max 5)
-      arrows.forEach((arrow, index) => {
-        const point = arrow.querySelector<SVGCircleElement>(".arrow-point");
-        
-        if (index < currentStacks && index < maxArrows) {
-          arrow.classList.add("active");
-          if (point) point.setAttribute("opacity", "1");
-        } else {
-          arrow.classList.remove("active");
-          if (point) point.setAttribute("opacity", "0.3");
-        }
-      });
-    }
-  }
-
-  private updateStackCounters(): void {
-    // Mettre à jour le compteur de balises affûtées (bas gauche)
-    if (this.baliseCounter) {
-      const bars = this.baliseCounter.querySelectorAll<SVGRectElement>(".stack-bar");
-      const dots = this.baliseCounter.querySelectorAll<SVGCircleElement>(".stack-bar-dot");
-      bars.forEach((bar, index) => {
-        if (index < this.baliseAffuteeStacks) {
-          bar.classList.add("active");
-          bar.setAttribute("opacity", "1");
-        } else {
-          bar.classList.remove("active");
-          bar.setAttribute("opacity", "0.3");
-        }
-      });
-      dots.forEach((dot, index) => {
-        if (index < this.baliseAffuteeStacks) {
-          dot.classList.add("active");
-          dot.setAttribute("opacity", "1");
-        } else {
-          dot.classList.remove("active");
-          dot.setAttribute("opacity", "0.3");
-        }
-      });
-    }
-
-    // Mettre à jour le compteur de pointes affûtées (bas droite)
-    if (this.pointeCounter) {
-      const bars = this.pointeCounter.querySelectorAll<SVGPolygonElement>(".stack-bar");
-      const lines = this.pointeCounter.querySelectorAll<SVGLineElement>(".stack-bar-line");
-      bars.forEach((bar, index) => {
-        if (index < this.pointeAffuteeStacks) {
-          bar.classList.add("active");
-          bar.setAttribute("opacity", "1");
-        } else {
-          bar.classList.remove("active");
-          bar.setAttribute("opacity", "0.3");
-        }
-      });
-      lines.forEach((line, index) => {
-        if (index < this.pointeAffuteeStacks) {
-          line.classList.add("active");
-          line.setAttribute("opacity", "1");
-        } else {
-          line.classList.remove("active");
-          line.setAttribute("opacity", "0.3");
-        }
-      });
-    }
-  }
-
-  private showLayer(layer: SVGGElement | null): void {
-    if (layer) {
-      layer.style.display = "block";
-    }
-  }
-
-  private hideLayer(layer: SVGGElement | null): void {
-    if (layer) {
-      layer.style.display = "none";
-    }
-  }
-
-  private removeLayerClasses(
-    layer: SVGGElement | null,
-    classes: string[]
-  ): void {
-    if (layer) {
-      layer.classList.remove(...classes);
-    }
-  }
-
-  private async loadTirPrecisLottie(): Promise<void> {
-    if (!this.tirPrecisLottieContainer) {
-      return;
-    }
-
-    // Attendre que lottie soit disponible (chargé depuis le CDN)
-    let retries = 0;
-    while (typeof (window as any).lottie === "undefined" && retries < 50) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      retries++;
-    }
-
-    // Vérifier que lottie est disponible
-    if (typeof (window as any).lottie === "undefined") {
-      console.error("Lottie n'est pas disponible après le chargement. Vérifiez que le script est chargé.");
-      return;
-    }
-
-    // Si l'animation est déjà chargée, ne pas la recharger
-    if (this.tirPrecisLottieAnimation) {
-      this.tirPrecisLottieContainer.style.display = "block";
-      
-      // Vérifier si l'animation est déjà à l'état actif (50%)
-      const totalFrames = this.tirPrecisLottieAnimation.totalFrames;
-      const halfFrame = Math.floor(totalFrames * 0.5);
-      const currentFrame = this.tirPrecisLottieAnimation.currentFrame;
-      
-      // Si l'animation est déjà à 50% ou proche, ne pas la relancer
-      if (Math.abs(currentFrame - halfFrame) <= 2) {
-        // L'animation est déjà à l'état actif, ne rien faire
-        return;
-      }
-      
-      // Retirer tous les handlers existants
-      if (this.tirPrecisRollbackHandler) {
-        this.tirPrecisLottieAnimation.removeEventListener('enterFrame', this.tirPrecisRollbackHandler);
-        this.tirPrecisRollbackHandler = null;
-      }
-      
-      // Réinitialiser à 0% et jouer jusqu'à 50%
-      this.tirPrecisLottieAnimation.goToAndStop(0, true);
-      this.tirPrecisLottieAnimation.setSpeed(1.5);
-      
-      // Créer le handler pour arrêter à 50%
-      const forwardCompleteHandler = () => {
-        if (!this.tirPrecisLottieAnimation) return;
-        
-        const currentFrame = this.tirPrecisLottieAnimation.currentFrame;
-        if (currentFrame >= halfFrame) {
-          // Retirer le listener AVANT de modifier l'animation pour éviter la boucle infinie
-          this.tirPrecisLottieAnimation.removeEventListener('enterFrame', forwardCompleteHandler);
-          this.tirPrecisRollbackHandler = null;
-          
-          // Arrêter l'animation en mettant la vitesse à 0, puis aller à 50%
-          this.tirPrecisLottieAnimation.setSpeed(0);
-          // Utiliser setTimeout pour éviter que goToAndStop déclenche enterFrame
-          setTimeout(() => {
-            if (this.tirPrecisLottieAnimation) {
-              this.tirPrecisLottieAnimation.stop();
-              this.tirPrecisLottieAnimation.goToAndStop(halfFrame, true);
-            }
-          }, 0);
-        }
-      };
-      
-      this.tirPrecisRollbackHandler = forwardCompleteHandler;
-      this.tirPrecisLottieAnimation.addEventListener('enterFrame', forwardCompleteHandler);
-      this.tirPrecisLottieAnimation.play();
-      
-      // Ajouter la classe CSS au cercle interne
-      this.addCrosshairInnerCircleClass();
-      return;
-    }
-
-    // Afficher le conteneur
-    this.tirPrecisLottieContainer.style.display = "block";
-
-    try {
-      // Utiliser lottie chargé depuis le CDN
-      const lottie = (window as any).lottie;
-      
-      console.log("[CRA JAUGE] Chargement du fichier crosshair.json");
-      const response = await fetch("../../../assets/classes/cra/crosshair.json");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const animationData = await response.json();
-      console.log("[CRA JAUGE] Données JSON chargées:", animationData);
-      
-      this.tirPrecisLottieAnimation = lottie.loadAnimation({
-        container: this.tirPrecisLottieContainer,
-        renderer: "svg",
-        loop: false, // Désactiver le loop automatique pour contrôler manuellement
-        autoplay: true,
-        animationData: animationData
-      });
-      
-      // Accélérer l'animation
-      this.tirPrecisLottieAnimation.setSpeed(1.5);
-      
-      // Calculer le frame à 50% (moitié de l'animation)
-      const totalFrames = this.tirPrecisLottieAnimation.totalFrames;
-      const halfFrame = Math.floor(totalFrames * 0.5);
-      
-      // Jouer de 0% à 50% une seule fois, puis s'arrêter à 50%
-      const forwardCompleteHandler = () => {
-        if (!this.tirPrecisLottieAnimation) return;
-        
-        const currentFrame = this.tirPrecisLottieAnimation.currentFrame;
-        if (currentFrame >= halfFrame) {
-          // Retirer le listener AVANT de modifier l'animation pour éviter la boucle infinie
-          this.tirPrecisLottieAnimation.removeEventListener('enterFrame', forwardCompleteHandler);
-          this.tirPrecisRollbackHandler = null;
-          
-          // Arrêter l'animation en mettant la vitesse à 0, puis aller à 50%
-          this.tirPrecisLottieAnimation.setSpeed(0);
-          // Utiliser setTimeout pour éviter que goToAndStop déclenche enterFrame
-          setTimeout(() => {
-            if (this.tirPrecisLottieAnimation) {
-              this.tirPrecisLottieAnimation.stop();
-              this.tirPrecisLottieAnimation.goToAndStop(halfFrame, true);
-            }
-          }, 0);
-        }
-      };
-      
-      this.tirPrecisRollbackHandler = forwardCompleteHandler;
-      this.tirPrecisLottieAnimation.addEventListener('enterFrame', forwardCompleteHandler);
-      
-      // Ajouter la classe CSS au cercle interne
-      this.addCrosshairInnerCircleClass();
-      
-      console.log("[CRA JAUGE] Animation Lottie créée (0% → 50%):", this.tirPrecisLottieAnimation);
-    } catch (error) {
-      console.error("Erreur lors du chargement de l'animation Lottie de Tir précis:", error);
-    }
-  }
-
-  private stopTirPrecisLottie(): void {
-    if (this.tirPrecisLottieAnimation) {
-      // Retirer le handler de progression 0-50%
-      if (this.tirPrecisRollbackHandler) {
-        this.tirPrecisLottieAnimation.removeEventListener('enterFrame', this.tirPrecisRollbackHandler);
-        this.tirPrecisRollbackHandler = null;
-      }
-      
-      // Aller à 50% si on n'y est pas déjà, puis jouer en arrière jusqu'à 0%
-      const currentFrame = this.tirPrecisLottieAnimation.currentFrame;
-      const totalFrames = this.tirPrecisLottieAnimation.totalFrames;
-      const halfFrame = Math.floor(totalFrames * 0.5);
-      
-      // Aller à 50% si nécessaire
-      if (currentFrame < halfFrame) {
-        this.tirPrecisLottieAnimation.goToAndStop(halfFrame, true);
-      }
-      
-      // Jouer en arrière jusqu'à 0%, puis s'arrêter à 0%
-      this.tirPrecisLottieAnimation.setSpeed(-1.5);
-      
-      // Créer un handler pour détecter quand on arrive à 0%
-      const rollbackCompleteHandler = () => {
-        if (!this.tirPrecisLottieAnimation) return;
-        
-        const frame = this.tirPrecisLottieAnimation.currentFrame;
-        if (frame <= 0) {
-          // Retirer le listener AVANT de modifier l'animation pour éviter la boucle infinie
-          this.tirPrecisLottieAnimation.removeEventListener('enterFrame', rollbackCompleteHandler);
-          
-          // Arrêter l'animation en mettant la vitesse à 0, puis aller à 0%
-          this.tirPrecisLottieAnimation.setSpeed(0);
-          // Utiliser setTimeout pour éviter que goToAndStop déclenche enterFrame
-          setTimeout(() => {
-            if (this.tirPrecisLottieAnimation) {
-              this.tirPrecisLottieAnimation.stop();
-              this.tirPrecisLottieAnimation.goToAndStop(0, true);
-              this.tirPrecisLottieAnimation = null;
-              this.hideTirPrecisContainer();
-            }
-          }, 0);
-        }
-      };
-      
-      this.tirPrecisLottieAnimation.addEventListener('enterFrame', rollbackCompleteHandler);
-      this.tirPrecisLottieAnimation.play();
-      return;
-    }
-    
-    // Si l'animation n'existe pas, cacher le conteneur
-    this.hideTirPrecisContainer();
-  }
-  
-  private hideTirPrecisContainer(): void {
-    if (this.tirPrecisLottieContainer) {
-      this.tirPrecisLottieContainer.style.display = "none";
-      // Vider le conteneur
-      this.tirPrecisLottieContainer.innerHTML = "";
-    }
-    // Réinitialiser la direction
-    this.tirPrecisAnimationDirection = 1;
-  }
-
-  private addCrosshairInnerCircleClass(): void {
-    if (!this.tirPrecisLottieContainer) {
-      return;
-    }
-
-    // Fonction pour ajouter la classe au cercle interne et réduire sa taille
-    const addClassToCircle = () => {
-      const svg = this.tirPrecisLottieContainer?.querySelector('svg');
-      if (!svg) return;
-
-      // Ne traiter qu'une seule fois
-      if (svg.querySelector('path.crosshair-inner-circle')) {
-        return; // Déjà traité
-      }
-
-      // Cibler le path avec la couleur cyan spécifique (rgb(33,189,195))
-      const paths = svg.querySelectorAll('path');
-      let foundCircle = false;
-      
-      paths.forEach(path => {
-        // Ignorer si déjà traité
-        if (path.classList.contains('crosshair-inner-circle')) {
-          return;
-        }
-        
-        const fill = path.getAttribute('fill');
-        // Vérifier la couleur cyan précise (rgb(33,189,195))
-        if (fill && fill.includes('rgb(33,189,195)')) {
-          // Vérifier aussi que c'est bien un cercle (path qui commence par M et contient C pour des courbes)
-          const d = path.getAttribute('d');
-          if (d && d.includes('M') && d.includes('C')) {
-            console.log('[CRA JAUGE] Cercle interne trouvé et stylisé:', { fill, d: d.substring(0, 50) });
-            path.classList.add('crosshair-inner-circle');
-            foundCircle = true;
-            
-            // Réduire la taille en appliquant un transform scale sur le groupe parent
-            const parentGroup = path.closest('g');
-            if (parentGroup && !parentGroup.hasAttribute('data-scaled')) {
-              const existingTransform = parentGroup.getAttribute('transform') || '';
-              // Scale depuis le centre
-              parentGroup.setAttribute('transform', `scale(0.6) ${existingTransform}`);
-              parentGroup.setAttribute('data-scaled', 'true');
-            }
-          }
-        }
-      });
-      
-      // Si on n'a pas trouvé avec la couleur exacte, essayer avec #21BDC3
-      if (!foundCircle) {
-        paths.forEach(path => {
-          if (path.classList.contains('crosshair-inner-circle')) {
-            return;
-          }
-          
-          const fill = path.getAttribute('fill');
-          if (fill === '#21BDC3' || fill === 'rgb(33, 189, 195)') {
-            const d = path.getAttribute('d');
-            if (d && d.includes('M') && d.includes('C')) {
-              path.classList.add('crosshair-inner-circle');
-              
-              const parentGroup = path.closest('g');
-              if (parentGroup && !parentGroup.hasAttribute('data-scaled')) {
-                const existingTransform = parentGroup.getAttribute('transform') || '';
-                parentGroup.setAttribute('transform', `scale(0.6) ${existingTransform}`);
-                parentGroup.setAttribute('data-scaled', 'true');
-              }
-            }
-          }
-        });
-      }
-    };
-
-    // Attendre que le SVG soit généré par Lottie
-    setTimeout(addClassToCircle, 100);
-    // Essayer aussi après un délai plus long au cas où l'animation prend plus de temps
-    setTimeout(addClassToCircle, 300);
   }
 }
 
