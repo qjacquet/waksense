@@ -20,6 +20,7 @@ export interface IopResourceState {
   inCombat: boolean;
   trackedPlayerName: string | null;
   lastSpellCaster: string | null;
+  lastSpellCost: string | null; // Coût du dernier sort lancé par le joueur tracké
 }
 
 export class ResourceState {
@@ -36,6 +37,7 @@ export class ResourceState {
       inCombat: false,
       trackedPlayerName: null,
       lastSpellCaster: null,
+      lastSpellCost: null,
     };
   }
 
@@ -125,6 +127,14 @@ export class ResourceState {
     this.state.lastSpellCaster = name;
   }
 
+  getLastSpellCost(): string | null {
+    return this.state.lastSpellCost;
+  }
+
+  setLastSpellCost(cost: string | null): void {
+    this.state.lastSpellCost = cost;
+  }
+
   reset(): void {
     this.state.concentration = 0;
     this.state.courroux = false;
@@ -133,6 +143,7 @@ export class ResourceState {
     this.state.egare = false;
     this.state.activePosture = null;
     this.state.lastSpellCaster = null;
+    this.state.lastSpellCost = null;
   }
 }
 

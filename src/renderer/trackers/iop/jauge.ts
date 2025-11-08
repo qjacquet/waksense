@@ -142,6 +142,11 @@ class IopJaugeTracker {
       }
     }
 
+    // Parse damage dealt (for courroux deactivation) - must be after spell cast
+    if (this.resourceParsers.parseDamageDealt(line)) {
+      uiNeedsUpdate = true;
+    }
+
     // Parse damage received (for posture deactivation)
     if (this.postureParser.parseDamage(line)) {
       uiNeedsUpdate = true;

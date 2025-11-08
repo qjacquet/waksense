@@ -20,6 +20,7 @@ class IopBoostsTracker {
   private inCombat: boolean = false;
   private trackedPlayerName: string | null = null;
   private lastSpellCaster: string | null = null; // Dernier joueur qui a lancé un sort (pour détecter le début de tour)
+  private lastSpellCost: string | null = null; // Coût du dernier sort lancé par le joueur tracké
 
   private debugMode: boolean = false;
 
@@ -131,6 +132,7 @@ class IopBoostsTracker {
     this.egare = false;
     this.activePosture = null;
     this.lastSpellCaster = null;
+    this.lastSpellCost = null;
     this.updateUI();
   }
 
@@ -328,7 +330,17 @@ class IopBoostsTracker {
     this.lastSpellCaster = spellCast.playerName;
 
     if (spellCast.playerName !== this.trackedPlayerName) {
+      // Si un autre joueur lance un sort, réinitialiser lastSpellCost pour éviter les faux positifs
+      this.lastSpellCost = null;
       return;
+    }
+
+    // Mémoriser le coût du dernier sort lancé par le joueur tracké
+    const spellCost = this.spellCostMap.get(spellCast.spellName);
+    this.lastSpellCost = spellCost || null;
+    
+    if (spellCost === "4PA" && this.courroux) {
+      console.log(`[IOP BOOSTS] Sort de 4 PA détecté: ${spellCast.spellName}, en attente de dégâts pour désactiver le courroux`);
     }
 
     // Initialize puissance on first spell cast in combat
@@ -338,14 +350,8 @@ class IopBoostsTracker {
       this.updateUI();
     }
 
-    // Handle Courroux loss - disparaît dès le premier sort coûtant 4 PA
-    if (this.courroux) {
-      const spellCost = this.spellCostMap.get(spellCast.spellName);
-      if (spellCost === "4PA") {
-        this.courroux = false;
-        this.updateUI();
-      }
-    }
+    // Note: Le courroux n'est plus géré ici, il sera désactivé dans parseDamage
+    // quand des dégâts seront réellement infligés
 
     // Handle Préparation loss - disparaît dès le lancement d'un sort infligeant des dégâts
     if (this.preparation && this.damageSpells.has(spellCast.spellName)) {
@@ -377,6 +383,20 @@ class IopBoostsTracker {
       
       if (damageMatch) {
         const targetName = damageMatch[1].trim();
+        
+        // For courroux: check if damage is dealt by tracked player (not received)
+        // Si le courroux est actif et que le dernier sort était un sort de 4 PA par le joueur tracké
+        if (
+          this.courroux &&
+          this.lastSpellCaster === this.trackedPlayerName &&
+          this.lastSpellCost === "4PA" &&
+          this.trackedPlayerName &&
+          targetName !== this.trackedPlayerName.trim()
+        ) {
+          console.log(`[IOP BOOSTS] Dégâts infligés détectés (${targetName} reçoit des dégâts), désactivation du courroux`);
+          this.courroux = false;
+          this.updateUI();
+        }
         
         // For posture: check if the tracked player receives damage
         if (

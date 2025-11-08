@@ -120,6 +120,71 @@ export class ResourceParsers {
     return false;
   }
 
+  parseDamageDealt(line: string): boolean {
+    // Only process combat lines
+    if (!line.includes("[Information (combat)]")) {
+      return false;
+    }
+
+    // Log toutes les lignes qui contiennent PV et - pour déboguer
+    if (line.includes("PV") && line.includes("-")) {
+      console.log(`[IOP JAUGE] Ligne de dégâts détectée: ${line}`);
+    }
+
+    if (!line.includes("PV") || !line.includes("-")) {
+      return false;
+    }
+
+    // Pattern pour les dégâts : peut avoir un timestamp au début, et les nombres peuvent avoir des espaces (format français)
+    // Exemple: "15:49:37,467 - [Information (combat)] Sac à patates: -8 342 PV (Feu) (Courroux)"
+    const damageMatch = line.match(
+      /\[Information \(combat\)\] ([^:]+):\s+-([\d\s]+)\s*PV/
+    );
+
+    if (!damageMatch) {
+      console.log(`[IOP JAUGE] Pattern de dégâts ne correspond pas pour: ${line}`);
+      return false;
+    }
+
+    const targetName = damageMatch[1].trim();
+    const trackedPlayerName = this.state.getTrackedPlayerName();
+    const courroux = this.state.getCourroux();
+    const lastSpellCaster = this.state.getLastSpellCaster();
+    const lastSpellCost = this.state.getLastSpellCost();
+
+    // Log tous les dégâts détectés si le courroux est actif
+    if (courroux) {
+      console.log(
+        `[IOP JAUGE] Dégâts détectés - cible: ${targetName}, courroux: ${courroux}, ` +
+        `lastSpellCaster: ${lastSpellCaster}, trackedPlayer: ${trackedPlayerName}, ` +
+        `lastSpellCost: ${lastSpellCost}, même joueur: ${targetName === trackedPlayerName?.trim()}`
+      );
+    }
+
+    // Si le courroux est actif et que le dernier sort était un sort de 4 PA par le joueur tracké
+    if (
+      courroux &&
+      lastSpellCaster === trackedPlayerName &&
+      lastSpellCost === "4PA"
+    ) {
+      // Si des dégâts sont infligés à quelqu'un d'autre que le joueur tracké,
+      // c'est que le joueur tracké a infligé ces dégâts (avec son sort de 4 PA)
+      if (trackedPlayerName && targetName !== trackedPlayerName.trim()) {
+        console.log(
+          `[IOP JAUGE] Dégâts infligés détectés (${targetName} reçoit ${damageMatch[2]} PV), désactivation du courroux`
+        );
+        this.state.setCourroux(false);
+        return true;
+      } else if (targetName === trackedPlayerName?.trim()) {
+        console.log(
+          `[IOP JAUGE] Dégâts reçus par le joueur tracké, pas de désactivation du courroux`
+        );
+      }
+    }
+
+    return false;
+  }
+
   handleSpellCast(
     spellCast: { playerName: string; spellName: string },
     spellCostMap: Map<string, string>,
@@ -131,7 +196,22 @@ export class ResourceParsers {
     this.state.setLastSpellCaster(spellCast.playerName);
 
     if (spellCast.playerName !== this.state.getTrackedPlayerName()) {
+      // Si un autre joueur lance un sort, réinitialiser lastSpellCost pour éviter les faux positifs
+      this.state.setLastSpellCost(null);
       return false;
+    }
+
+    // Mémoriser le coût du dernier sort lancé par le joueur tracké
+    const spellCost = spellCostMap.get(spellCast.spellName);
+    this.state.setLastSpellCost(spellCost || null);
+    
+    if (this.state.getCourroux()) {
+      console.log(
+        `[IOP JAUGE] Sort lancé sous courroux: ${spellCast.spellName}, coût: ${spellCost || "non trouvé"}`
+      );
+      if (spellCost === "4PA") {
+        console.log(`[IOP JAUGE] Sort de 4 PA détecté, en attente de dégâts pour désactiver le courroux`);
+      }
     }
 
     // Initialize puissance on first spell cast if not already in combat
@@ -145,14 +225,8 @@ export class ResourceParsers {
       updated = true;
     }
 
-    // Handle Courroux loss - disparaît dès le premier sort coûtant 4 PA
-    if (this.state.getCourroux()) {
-      const spellCost = spellCostMap.get(spellCast.spellName);
-      if (spellCost === "4PA") {
-        this.state.setCourroux(false);
-        updated = true;
-      }
-    }
+    // Note: Le courroux n'est plus géré ici, il sera désactivé dans parseDamageDealt
+    // quand des dégâts seront réellement infligés
 
     // Handle Préparation loss - disparaît dès le lancement d'un sort infligeant des dégâts
     if (this.state.getPreparation() && damageSpells.has(spellCast.spellName)) {
