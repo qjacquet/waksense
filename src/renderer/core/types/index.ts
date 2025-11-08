@@ -13,7 +13,6 @@ declare global {
       selectLogPath: () => Promise<string | null>;
       startMonitoring: (logPath?: string) => Promise<string>;
       stopMonitoring: () => Promise<void>;
-      createTracker: (className: string, playerName: string) => Promise<string>;
       closeTracker: (trackerId: string) => Promise<void>;
       getDeduplicationStats: () => Promise<any>;
       getDetectedClasses: () => Promise<
@@ -21,8 +20,6 @@ declare global {
       >;
       getAssetPath: (...pathSegments: string[]) => Promise<string>;
       openDebug: () => Promise<void>;
-      toggleCraJauge: (playerName: string) => Promise<string>;
-      toggleCraTracker: (playerName: string) => Promise<string>;
       onClassDetected: (
         callback: (detection: { className: string; playerName: string }) => void
       ) => void;

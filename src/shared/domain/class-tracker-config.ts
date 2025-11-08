@@ -32,12 +32,6 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
     {
       className: "Cra",
       trackers: {
-        // main: {
-        //   htmlFile: "index.html",
-        //   width: 320,
-        //   height: 200,
-        //   resizable: false,
-        // },
         jauge: {
           htmlFile: "jauge.html",
           width: 300,
@@ -46,10 +40,9 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
           rendererName: "CRA JAUGE",
         },
       },
-      availableTrackerTypes: ["main", "jauge"],
-      hideTogether: [["main", "jauge"]],
+      availableTrackerTypes: ["jauge"],
+      hideTogether: [["jauge"]],
       autoShowOnTurnStart: ["jauge"], // Afficher la jauge au début du tour
-      autoCreateButHide: ["main"], // Créer le tracker principal mais le cacher
     } as ClassTrackerConfig,
   ],
   [

@@ -5,8 +5,6 @@
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { Config } from "../core/config";
 import { ClassDetection, LogMonitor } from "../core/log-monitor";
-import { TrackerManager } from "../core/tracker-manager";
-import { getClassConfig, getTrackerTypes } from "../../shared/domain/class-tracker-config";
 import { WindowManager } from "../windows/window-manager";
 
 export function setupIpcHandlers(
@@ -26,7 +24,6 @@ export function setupIpcHandlers(
     "select-log-path",
     "start-monitoring",
     "stop-monitoring",
-    "create-tracker",
     "close-tracker",
     "get-deduplication-stats",
     "get-detected-classes",
@@ -35,18 +32,6 @@ export function setupIpcHandlers(
   ];
 
   handlers.forEach((handler) => {
-    if (ipcMain.listenerCount(handler) > 0) {
-      ipcMain.removeHandler(handler);
-    }
-  });
-
-  // Ajouter les nouveaux handlers pour CRA
-  const craHandlers = [
-    "toggle-cra-jauge",
-    "toggle-cra-tracker",
-  ];
-
-  craHandlers.forEach((handler) => {
     if (ipcMain.listenerCount(handler) > 0) {
       ipcMain.removeHandler(handler);
     }
@@ -123,53 +108,6 @@ export function setupIpcHandlers(
   });
 
   // Trackers
-  ipcMain.handle(
-    "create-tracker",
-    (_event, className: string, playerName: string) => {
-      const character = { className, playerName };
-      const classConfig = getClassConfig(className);
-
-      // Si la classe a une configuration, utiliser TrackerManager
-      if (classConfig) {
-        const result = TrackerManager.toggleAllTrackers(character);
-        const trackerIds = getTrackerTypes(className)
-          .map((type) => TrackerManager.getTrackerId(className, playerName, type))
-          .join(",");
-
-        // Positionner les trackers les uns par rapport aux autres
-        const trackerTypes = getTrackerTypes(className);
-        for (let i = 1; i < trackerTypes.length; i++) {
-          TrackerManager.positionTrackerRelative(
-            character,
-            trackerTypes[i],
-            trackerTypes[i - 1]
-          );
-        }
-
-        ensureLogMonitoring();
-        return `${trackerIds}:${result.isVisible}`;
-      }
-
-      // Comportement par défaut pour les classes non configurées
-      const trackerId = `tracker-${className}-${playerName}`;
-
-      if (WindowManager.hasWindow(trackerId)) {
-        const existingWindow = WindowManager.getWindow(trackerId);
-        const { result } = WindowManager.toggleWindow(existingWindow);
-        return `${trackerId}:${result}`;
-      }
-
-      WindowManager.createTrackerWindow(trackerId, "index.html", className, {
-        width: 320,
-        height: 200,
-        resizable: false,
-      });
-
-      ensureLogMonitoring();
-      return `${trackerId}:true`;
-    }
-  );
-
   ipcMain.handle("close-tracker", (_event, trackerId: string) => {
     WindowManager.closeWindow(trackerId);
   });
@@ -194,27 +132,4 @@ export function setupIpcHandlers(
   ipcMain.handle("open-debug", () => {
     WindowManager.createDebugWindow();
   });
-
-  // Handlers spécifiques pour CRA (génériques via TrackerManager)
-  ipcMain.handle(
-    "toggle-cra-jauge",
-    (_event, playerName: string) => {
-      const character = { className: "Cra", playerName };
-      const result = TrackerManager.toggleTracker(character, "jauge");
-      const jaugeTrackerId = TrackerManager.getTrackerId("Cra", playerName, "jauge");
-      ensureLogMonitoring();
-      return `${jaugeTrackerId}:${result.isVisible}`;
-    }
-  );
-
-  ipcMain.handle(
-    "toggle-cra-tracker",
-    (_event, playerName: string) => {
-      const character = { className: "Cra", playerName };
-      const result = TrackerManager.toggleTracker(character, "main");
-      const trackerId = TrackerManager.getTrackerId("Cra", playerName, "main");
-      ensureLogMonitoring();
-      return `${trackerId}:${result.isVisible}`;
-    }
-  );
 }

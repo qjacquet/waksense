@@ -2,7 +2,7 @@
  * Main Process - Point d'entrée principal de l'application Electron
  */
 
-import { app, BrowserWindow, protocol, screen } from "electron";
+import { app, BrowserWindow, protocol } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import { CombatStartInfo } from "../shared/log/log-processor";
@@ -27,7 +27,6 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let launcherWindow: BrowserWindow | null = null;
-let detectionOverlay: BrowserWindow | null = null;
 let logMonitor: LogMonitor | null = null;
 let combatLogMonitor: LogMonitor | null = null; // LogMonitor pour wakfu.log (événements de combat)
 let windowWatcher: WindowWatcher | null = null;
@@ -66,69 +65,6 @@ function ensureLogMonitoring(): void {
   if (!combatLogMonitor) {
     startCombatLogMonitoring(Config.getCombatLogFilePath(logPath));
   }
-}
-
-function createDetectionOverlay(): void {
-  if (detectionOverlay && !detectionOverlay.isDestroyed()) {
-    detectionOverlay.show();
-    return;
-  }
-
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } =
-    primaryDisplay.workAreaSize;
-
-  detectionOverlay = WindowManager.createOverlayWindow("detection-overlay", {
-    width: 250,
-    height: 150,
-    x: screenWidth - 250,
-    y: Math.floor((screenHeight - 150) / 2),
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: false,
-  });
-
-  detectionOverlay.loadFile(
-    path.join(
-      __dirname,
-      "..",
-      "renderer",
-      "core",
-      "detection-overlay",
-      "index.html"
-    )
-  );
-
-  detectionOverlay.webContents.once("did-finish-load", () => {
-    if (!detectionOverlay || detectionOverlay.isDestroyed()) {
-      return;
-    }
-
-    detectionOverlay.webContents.on(
-      "console-message",
-      (event, level, message, line, sourceId) => {
-        console.log(
-          `[OVERLAY RENDERER ${level}]: ${message} (${sourceId}:${line})`
-        );
-      }
-    );
-
-    const alreadyDetected = Array.from(detectedClasses.values());
-    for (const detection of alreadyDetected) {
-      WindowManager.safeSendToWindow(
-        detectionOverlay,
-        "class-detected",
-        detection
-      );
-    }
-  });
-
-  detectionOverlay.on("closed", () => {
-    detectionOverlay = null;
-  });
-
-  detectionOverlay.show();
 }
 
 function createLauncherWindow(): void {
@@ -302,13 +238,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
       // Ne plus masquer toutes les jauges au début du combat
       // Les jauges seront gérées par le WindowWatcher et les événements de tour
 
-      // S'assurer que l'overlay existe et est visible avant de détecter les combattants
-      if (!detectionOverlay || detectionOverlay.isDestroyed()) {
-        //createDetectionOverlay();
-      } else if (!detectionOverlay.isVisible()) {
-        //detectionOverlay.show();
-      }
-
       // Synchroniser les mappings avec logMonitor pour la détection de début de tour
       playerNameToFighterId.clear();
       fighterIdToFighter.clear();
@@ -329,13 +258,7 @@ function startCombatLogMonitoring(logFilePath: string): void {
             fighterIdToFighter.set(fighter.fighterId, fighter);
           }
 
-          // Notifier la détection de classe pour l'overlay et le launcher
-          // Cela va mettre à jour la liste des personnages
-          WindowManager.safeSendToWindow(detectionOverlay, "class-detected", {
-            className: fighter.className,
-            playerName: fighter.playerName,
-          });
-
+          // Notifier la détection de classe pour le launcher
           WindowManager.safeSendToWindow(launcherWindow, "class-detected", {
             className: fighter.className,
             playerName: fighter.playerName,
@@ -423,13 +346,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
     }) => {
       // Un nouveau combattant a rejoint le combat - mettre à jour la liste des personnages
       if (data.fighter.className) {
-        // S'assurer que l'overlay existe et est visible
-        if (!detectionOverlay || detectionOverlay.isDestroyed()) {
-          //createDetectionOverlay();
-        } else if (!detectionOverlay.isVisible()) {
-          //detectionOverlay.show();
-        }
-
         // Enregistrer la détection de classe
         const key = `${data.fighter.className}_${data.fighter.playerName}`;
         detectedClasses.set(key, {
@@ -455,11 +371,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
         }
 
         // Notifier la détection de classe pour mettre à jour la liste
-        WindowManager.safeSendToWindow(detectionOverlay, "class-detected", {
-          className: data.fighter.className,
-          playerName: data.fighter.playerName,
-        });
-
         WindowManager.safeSendToWindow(launcherWindow, "class-detected", {
           className: data.fighter.className,
           playerName: data.fighter.playerName,
@@ -522,15 +433,6 @@ function startCombatLogMonitoring(logFilePath: string): void {
     playerNameToFighterId.clear();
     fighterIdToFighter.clear();
 
-    // Masquer l'overlay de la liste des personnages à la fin du combat
-    if (
-      detectionOverlay &&
-      !detectionOverlay.isDestroyed() &&
-      detectionOverlay.isVisible()
-    ) {
-      detectionOverlay.hide();
-    }
-
     WindowManager.safeSendToWindow(launcherWindow, "combat-ended");
     
     // Envoyer l'événement à toutes les fenêtres de trackers
@@ -555,18 +457,6 @@ function startLogMonitoring(logFilePath: string): void {
   logMonitor.on("classDetected", (detection: ClassDetection) => {
     const key = `${detection.className}_${detection.playerName}`;
     detectedClasses.set(key, detection);
-
-    if (
-      !WindowManager.safeSendToWindow(
-        detectionOverlay,
-        "class-detected",
-        detection
-      )
-    ) {
-      //createDetectionOverlay();
-    } else if (detectionOverlay && !detectionOverlay.isVisible()) {
-      //detectionOverlay.show();
-    }
 
     WindowManager.safeSendToWindow(launcherWindow, "class-detected", detection);
   });
