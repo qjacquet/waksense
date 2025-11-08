@@ -77,7 +77,8 @@ export function updateTextElement(elementId: string, text: string): void {
 export function setupTrackerEventListeners(
   onLogLine: (line: string, parsed: any) => void,
   onCombatEnded?: () => void,
-  onCombatStarted?: () => void
+  onCombatStarted?: () => void,
+  onRefreshUI?: () => void
 ): void {
   if (!window.electronAPI) {
     return;
@@ -91,5 +92,9 @@ export function setupTrackerEventListeners(
 
   if (onCombatStarted) {
     window.electronAPI.onCombatStarted(onCombatStarted);
+  }
+
+  if (onRefreshUI) {
+    window.electronAPI.onRefreshUI(onRefreshUI);
   }
 }

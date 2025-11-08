@@ -11,6 +11,15 @@ import { WindowWatcher } from "./window-watcher";
 import { getTrackerTypes } from "../../shared/domain/class-tracker-config";
 
 export class CombatHandler {
+  private static isCombatActive: boolean = false;
+
+  /**
+   * Vérifie si un combat est actif
+   */
+  static isInCombat(): boolean {
+    return this.isCombatActive;
+  }
+
   /**
    * Gère le début d'un combat
    */
@@ -75,6 +84,27 @@ export class CombatHandler {
 
     // Envoyer l'événement à toutes les fenêtres de trackers
     this.broadcastToTrackers("combat-started");
+
+    // Marquer le combat comme actif
+    this.isCombatActive = true;
+
+    // Afficher les trackers du premier personnage détecté
+    // (celui qui a probablement lancé le combat)
+    if (combatInfo.fighters && combatInfo.fighters.length > 0) {
+      const firstFighter = combatInfo.fighters.find(f => f.className);
+      if (firstFighter && firstFighter.className) {
+        const character = {
+          className: firstFighter.className,
+          playerName: firstFighter.playerName,
+        };
+        // Attendre un peu pour que les trackers soient créés
+        setTimeout(() => {
+          if (this.isCombatActive) {
+            TrackerManager.showTrackersOnTurnStart(character);
+          }
+        }, 200);
+      }
+    }
   }
 
   /**
@@ -163,6 +193,9 @@ export class CombatHandler {
 
     // Envoyer l'événement à toutes les fenêtres de trackers
     this.broadcastToTrackers("combat-ended");
+
+    // Marquer le combat comme terminé
+    this.isCombatActive = false;
   }
 
   /**

@@ -100,8 +100,9 @@ app.whenReady().then(() => {
   windowWatcher.setOnCharacterChanged((character) => {
     hideAllJauges();
     
-    if (character) {
+    if (character && CombatHandler.isInCombat()) {
       // UN SEUL ENDROIT pour gérer l'affichage automatique des trackers
+      // Ne s'affiche que si on est en combat
       TrackerManager.showTrackersOnTurnStart(character);
     }
   });

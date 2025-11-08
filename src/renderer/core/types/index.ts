@@ -26,6 +26,7 @@ declare global {
       onCombatStarted: (callback: () => void) => void;
       onCombatEnded: (callback: () => void) => void;
       onLogLine: (callback: (line: string, parsed: any) => void) => void;
+      onRefreshUI: (callback: () => void) => void;
       onMonitoringStarted: (callback: () => void) => void;
       onLogFileNotFound: (callback: () => void) => void;
       removeAllListeners: (channel: string) => void;

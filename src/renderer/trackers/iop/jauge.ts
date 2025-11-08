@@ -90,7 +90,18 @@ class IopJaugeTracker {
       },
       () => {
         this.state.setInCombat(true);
-        this.updateUI();
+        // Forcer une mise à jour complète de l'UI au début du combat
+        // Cela permet de s'assurer que tous les états (y compris le courroux) sont affichés
+        setTimeout(() => {
+          this.updateUI();
+        }, 50);
+      },
+      () => {
+        // Forcer une mise à jour de l'UI quand demandé
+        // Utiliser un petit délai pour s'assurer que tous les états sont à jour
+        setTimeout(() => {
+          this.updateUI();
+        }, 50);
       }
     );
   }
@@ -110,6 +121,9 @@ class IopJaugeTracker {
 
     if (this.resourceParsers.parseCourroux(line)) {
       uiNeedsUpdate = true;
+      if (this.debugMode) {
+        console.log("[IOP JAUGE] Courroux détecté, mise à jour de l'UI nécessaire");
+      }
     }
 
     if (this.resourceParsers.parsePuissance(line)) {
@@ -145,6 +159,9 @@ class IopJaugeTracker {
     // Parse damage dealt (for courroux deactivation) - must be after spell cast
     if (this.resourceParsers.parseDamageDealt(line)) {
       uiNeedsUpdate = true;
+      if (this.debugMode) {
+        console.log("[IOP JAUGE] Dégâts infligés détectés, mise à jour de l'UI nécessaire");
+      }
     }
 
     // Parse damage received (for posture deactivation)
@@ -153,6 +170,9 @@ class IopJaugeTracker {
     }
 
     if (uiNeedsUpdate) {
+      if (this.debugMode) {
+        console.log("[IOP JAUGE] Mise à jour de l'UI déclenchée");
+      }
       this.updateUI();
     }
   }
@@ -328,13 +348,27 @@ class IopJaugeTracker {
     }
 
     // Courroux
+    if (this.debugMode) {
+      console.log(`[IOP JAUGE] updateUI - courroux: ${courroux}, courrouxLayer: ${!!this.courrouxLayer}`);
+    }
     if (courroux && this.courrouxLayer) {
       this.svgElement.classList.add("has-courroux");
       this.showLayer(this.courrouxLayer);
       this.courrouxLayer.classList.add("active");
       this.loadCourrouxLottie();
+      if (this.debugMode) {
+        console.log("[IOP JAUGE] Courroux activé, couche affichée");
+      }
     } else {
+      // S'assurer que la couche est bien cachée et que la classe active est retirée
+      if (this.courrouxLayer) {
+        this.hideLayer(this.courrouxLayer);
+        this.courrouxLayer.classList.remove("active");
+      }
       this.stopCourrouxLottie();
+      if (this.debugMode) {
+        console.log(`[IOP JAUGE] Courroux désactivé (courroux=${courroux}), couche cachée`);
+      }
     }
 
     // Préparation

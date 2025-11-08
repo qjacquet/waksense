@@ -16,6 +16,7 @@ import {
 } from "../../shared/domain/class-tracker-config";
 import { WindowManager } from "../windows/window-manager";
 import { Config } from "./config";
+import { CombatHandler } from "./combat-handler";
 
 export interface Character {
   className: string;
@@ -349,6 +350,11 @@ export class TrackerManager {
    * C'est LE SEUL endroit où l'affichage automatique est géré
    */
   static showTrackersOnTurnStart(character: Character): void {
+    // Ne pas afficher les trackers si on n'est pas en combat
+    if (!CombatHandler.isInCombat()) {
+      return;
+    }
+
     const autoShow = getAutoShowTrackers(character.className);
     const autoCreateButHide = getAutoCreateButHideTrackers(character.className);
 
@@ -356,7 +362,22 @@ export class TrackerManager {
     for (const trackerType of autoShow) {
       const window = this.showTracker(character, trackerType);
       if (window && !window.isDestroyed()) {
-        WindowManager.safeSendToWindow(window, "combat-started");
+        // S'assurer que la fenêtre est complètement chargée avant d'envoyer les événements
+        if (window.webContents.isLoading()) {
+          window.webContents.once("did-finish-load", () => {
+            WindowManager.safeSendToWindow(window, "combat-started");
+            // Forcer une mise à jour de l'UI après un court délai pour s'assurer que tout est prêt
+            setTimeout(() => {
+              WindowManager.safeSendToWindow(window, "refresh-ui");
+            }, 100);
+          });
+        } else {
+          WindowManager.safeSendToWindow(window, "combat-started");
+          // Forcer une mise à jour de l'UI après un court délai
+          setTimeout(() => {
+            WindowManager.safeSendToWindow(window, "refresh-ui");
+          }, 100);
+        }
       }
     }
 

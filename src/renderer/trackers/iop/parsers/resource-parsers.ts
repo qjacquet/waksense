@@ -56,7 +56,22 @@ export class ResourceParsers {
       /Courroux \(\+(\d+) Niv\.\) \((Compulsion|Concentration)\)/
     );
     if (courrouxGainMatch) {
+      console.log(`[IOP JAUGE] Courroux détecté dans la ligne: ${line.substring(0, 100)}`);
+      
+      // Extraire le nom du joueur depuis la ligne
+      const playerMatch = line.match(
+        /\[Information \(combat\)\] ([^:]+): Courroux/
+      );
+      if (playerMatch && !this.state.getTrackedPlayerName()) {
+        // Définir le nom du joueur tracké si ce n'est pas déjà fait
+        this.state.setTrackedPlayerName(playerMatch[1].trim());
+        console.log(`[IOP JAUGE] Nom du joueur tracké défini: ${playerMatch[1].trim()}`);
+      }
+      
+      const wasCourroux = this.state.getCourroux();
       this.state.setCourroux(true);
+      const isCourroux = this.state.getCourroux();
+      console.log(`[IOP JAUGE] État courroux: ${wasCourroux} -> ${isCourroux}`);
       return true;
     }
     return false;
@@ -196,6 +211,12 @@ export class ResourceParsers {
 
     // Mémoriser le dernier joueur qui a lancé un sort
     this.state.setLastSpellCaster(spellCast.playerName);
+
+    // Si trackedPlayerName n'est pas défini, le définir avec le nom du joueur qui lance le sort
+    if (!this.state.getTrackedPlayerName()) {
+      this.state.setTrackedPlayerName(spellCast.playerName);
+      console.log(`[IOP JAUGE] Nom du joueur tracké défini depuis le sort: ${spellCast.playerName}`);
+    }
 
     if (spellCast.playerName !== this.state.getTrackedPlayerName()) {
       // Si un autre joueur lance un sort, réinitialiser lastSpellCost pour éviter les faux positifs
