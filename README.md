@@ -20,25 +20,14 @@ npm install
 npm run build
 ```
 
-### Build en mode watch (développement)
-```bash
-npm run build:watch
-```
-
 ## ▶️ Lancement
 
-### Mode développement
-```bash
-npm run dev
-```
-
-### Mode production
 ```bash
 npm start
 ```
 
 ### Mode debug 
-En console navigateur
+En console navigateur (F12)
 ```
 window.electronAPI.openDebug()
 ```
