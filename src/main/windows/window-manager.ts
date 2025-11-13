@@ -34,8 +34,8 @@ export class WindowManager {
   static createOverlayWindow(
     id: string,
     options: {
-      width?: number;
-      height?: number;
+      width: number;
+      height: number;
       x?: number;
       y?: number;
       frame?: boolean;
@@ -46,16 +46,16 @@ export class WindowManager {
       minWidth?: number;
       minHeight?: number;
       webPreferences?: BrowserWindowConstructorOptions["webPreferences"];
-    } = {}
+    }
   ): BrowserWindow {
     const savedPos = Config.getOverlayPosition(id);
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width: screenWidth, height: screenHeight } =
       primaryDisplay.workAreaSize;
 
-    // Utiliser les dimensions sauvegardées si disponibles, sinon les options, sinon les valeurs par défaut
-    const width = savedPos?.width ?? options.width ?? 400;
-    const height = savedPos?.height ?? options.height ?? 300;
+    // Utiliser les dimensions sauvegardées si disponibles, sinon les options
+    const width = savedPos?.width ?? options.width;
+    const height = savedPos?.height ?? options.height;
 
     const defaults: BrowserWindowConstructorOptions = {
       width,

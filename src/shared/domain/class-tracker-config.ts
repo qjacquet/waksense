@@ -34,8 +34,8 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
       trackers: {
         jauge: {
           htmlFile: "jauge.html",
-          width: 210,
-          height: 260,
+          width: 200,
+          height: 200,
           resizable: true,
           rendererName: "CRA JAUGE",
         },
@@ -52,8 +52,8 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
       trackers: {
         jauge: {
           htmlFile: "jauge.html",
-          width: 260,
-          height: 260,
+          width: 140,
+          height: 200,
           resizable: true,
           rendererName: "IOP JAUGE",
         },
