@@ -19,8 +19,8 @@ export interface WindowBounds {
 }
 
 interface WindowConfig {
-  width: number;
-  height: number;
+  width: number | "auto";
+  height: number | "auto";
   resizable?: boolean;
   rendererName?: string;
 }
@@ -68,11 +68,13 @@ export class WindowManager {
       frame: options.frame ?? false,
       transparent: options.transparent ?? true,
       alwaysOnTop: options.alwaysOnTop ?? true,
-      resizable: options.resizable !== undefined ? options.resizable : true,
+      resizable: false,
       fullscreenable: options.fullscreenable ?? false,
       skipTaskbar: true,
       minWidth: options.minWidth ?? 200,
       minHeight: options.minHeight ?? 150,
+      maxWidth: options.minWidth ?? width,
+      maxHeight: options.minHeight ?? height,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -197,6 +199,136 @@ export class WindowManager {
   }
 
   /**
+   * Mesure le contenu de la fenêtre et ajuste sa taille automatiquement
+   */
+  private static async measureAndResizeWindow(
+    window: BrowserWindow,
+    trackerId: string,
+    config: WindowConfig
+  ): Promise<void> {
+    if (config.width !== "auto" && config.height !== "auto") {
+      // Pas besoin de mesurer si les deux dimensions sont fixes
+      return;
+    }
+
+    try {
+      // Attendre que le contenu soit complètement chargé et rendu
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const result = await window.webContents.executeJavaScript(`
+        (function() {
+          const body = document.body;
+          const html = document.documentElement;
+          
+          // Obtenir les dimensions du contenu réel
+          const contentWidth = Math.max(
+            body.scrollWidth,
+            body.offsetWidth,
+            html.clientWidth,
+            html.scrollWidth,
+            html.offsetWidth
+          );
+          const contentHeight = Math.max(
+            body.scrollHeight,
+            body.offsetHeight,
+            html.clientHeight,
+            html.scrollHeight,
+            html.offsetHeight
+          );
+          
+          // Vérifier les styles CSS fixes sur html et body
+          const htmlStyle = window.getComputedStyle(html);
+          const bodyStyle = window.getComputedStyle(body);
+          
+          let finalWidth = contentWidth;
+          let finalHeight = contentHeight;
+          
+          // Si le CSS définit une taille fixe sur html ou body, l'utiliser
+          const htmlWidth = htmlStyle.width;
+          const htmlHeight = htmlStyle.height;
+          const bodyWidth = bodyStyle.width;
+          const bodyHeight = bodyStyle.height;
+          
+          if (htmlWidth && htmlWidth !== 'auto' && !htmlWidth.includes('%')) {
+            finalWidth = Math.max(finalWidth, parseFloat(htmlWidth));
+          }
+          if (htmlHeight && htmlHeight !== 'auto' && !htmlHeight.includes('%')) {
+            finalHeight = Math.max(finalHeight, parseFloat(htmlHeight));
+          }
+          
+          if (bodyWidth && bodyWidth !== 'auto' && !bodyWidth.includes('%')) {
+            finalWidth = Math.max(finalWidth, parseFloat(bodyWidth));
+          }
+          if (bodyHeight && bodyHeight !== 'auto' && !bodyHeight.includes('%')) {
+            finalHeight = Math.max(finalHeight, parseFloat(bodyHeight));
+          }
+          
+          // Chercher aussi dans le conteneur principal (jauge-overlay)
+          const overlay = document.querySelector('.jauge-overlay');
+          if (overlay) {
+            const overlayRect = overlay.getBoundingClientRect();
+            const overlayStyle = window.getComputedStyle(overlay);
+            
+            // Si l'overlay a une taille définie, l'utiliser
+            const overlayWidth = overlayStyle.width;
+            const overlayHeight = overlayStyle.height;
+            
+            if (overlayWidth && overlayWidth !== 'auto' && !overlayWidth.includes('%')) {
+              finalWidth = Math.max(finalWidth, parseFloat(overlayWidth));
+            }
+            if (overlayHeight && overlayHeight !== 'auto' && !overlayHeight.includes('%')) {
+              finalHeight = Math.max(finalHeight, parseFloat(overlayHeight));
+            }
+            
+            // Sinon utiliser getBoundingClientRect
+            if (overlayRect.width > 0) {
+              finalWidth = Math.max(finalWidth, overlayRect.width);
+            }
+            if (overlayRect.height > 0) {
+              finalHeight = Math.max(finalHeight, overlayRect.height);
+            }
+          }
+          
+          // Chercher le plus grand élément SVG ou image
+          const svg = document.querySelector('svg');
+          if (svg) {
+            const svgRect = svg.getBoundingClientRect();
+            const svgWidth = svg.width?.baseVal?.value || svgRect.width;
+            const svgHeight = svg.height?.baseVal?.value || svgRect.height;
+            
+            if (svgWidth > 0) {
+              finalWidth = Math.max(finalWidth, svgWidth);
+            }
+            if (svgHeight > 0) {
+              finalHeight = Math.max(finalHeight, svgHeight);
+            }
+          }
+          
+          return {
+            width: Math.ceil(finalWidth),
+            height: Math.ceil(finalHeight)
+          };
+        })()
+      `);
+
+      const newWidth = config.width === "auto" ? result.width : config.width;
+      const newHeight = config.height === "auto" ? result.height : config.height;
+
+      if (!window.isDestroyed()) {
+        window.setSize(newWidth, newHeight);
+        // Sauvegarder la nouvelle taille
+        const bounds = window.getBounds();
+        Config.saveOverlayPosition(trackerId, bounds.x, bounds.y, bounds.width, bounds.height);
+      }
+    } catch (error) {
+      console.error(
+        `[${config.rendererName || "TRACKER"}] Error measuring content:`,
+        error
+      );
+    }
+  }
+
+  /**
    * Crée et configure une fenêtre tracker
    */
   static createTrackerWindow(
@@ -209,9 +341,13 @@ export class WindowManager {
       return this.getWindow(trackerId)!;
     }
 
+    // Utiliser des dimensions par défaut si "auto" est spécifié
+    const initialWidth = config.width === "auto" ? 400 : config.width;
+    const initialHeight = config.height === "auto" ? 300 : config.height;
+
     const window = this.createOverlayWindow(trackerId, {
-      width: config.width,
-      height: config.height,
+      width: initialWidth,
+      height: initialHeight,
       transparent: true,
       alwaysOnTop: true,
       resizable: config.resizable ?? false,
@@ -235,6 +371,16 @@ export class WindowManager {
     window
       .loadFile(htmlPath)
       .then(() => {
+        // Mesurer et ajuster la taille si nécessaire
+        if (config.width === "auto" || config.height === "auto") {
+          window.webContents.once("did-finish-load", () => {
+            this.measureAndResizeWindow(window, trackerId, config);
+          });
+          // Aussi essayer après un court délai pour s'assurer que le CSS est appliqué
+          setTimeout(() => {
+            this.measureAndResizeWindow(window, trackerId, config);
+          }, 200);
+        }
         // NE PLUS afficher automatiquement - l'appelant décidera quand afficher
         // window.show();
         // window.focus();
