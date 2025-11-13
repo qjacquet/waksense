@@ -5,8 +5,8 @@
 
 export interface TrackerWindowConfig {
   htmlFile: string;
-  width: number | "auto";
-  height: number | "auto";
+  width: number;
+  height: number;
   resizable: boolean;
   rendererName?: string;
 }
@@ -34,8 +34,8 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
       trackers: {
         jauge: {
           htmlFile: "jauge.html",
-          width: "auto",
-          height: "auto",
+          width: 210,
+          height: 260,
           resizable: true,
           rendererName: "CRA JAUGE",
         },
@@ -52,15 +52,15 @@ export const CLASS_TRACKER_CONFIGS: Map<string, ClassTrackerConfig> = new Map([
       trackers: {
         jauge: {
           htmlFile: "jauge.html",
-          width: "auto",
-          height: "auto",
+          width: 260,
+          height: 260,
           resizable: true,
           rendererName: "IOP JAUGE",
         },
         combos: {
           htmlFile: "combos.html",
-          width: "auto",
-          height: "auto",
+          width: 240,
+          height: 180,
           resizable: true,
           rendererName: "IOP COMBOS",
         },

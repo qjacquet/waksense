@@ -76,16 +76,10 @@ if (fs.existsSync(rendererRendererDir)) {
   fixImports(rendererDir);
 }
 
-// Move main/shared/* to shared/ (needed for main process imports)
+// Remove duplicate shared from main/shared (but keep renderer/shared for ES modules)
 const mainSharedDir = path.join(distDir, 'main', 'shared');
-const sharedDir = path.join(distDir, 'shared');
 if (fs.existsSync(mainSharedDir)) {
-  console.log('Moving main/shared/* to shared/');
-  // Copier main/shared vers shared au lieu de le supprimer
-  if (!fs.existsSync(sharedDir)) {
-    fs.mkdirSync(sharedDir, { recursive: true });
-  }
-  moveDir(mainSharedDir, sharedDir);
+  console.log('Removing duplicate main/shared/');
   removeDir(mainSharedDir);
 }
 // Keep renderer/shared/ as it contains ES module versions needed by renderer
