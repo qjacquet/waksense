@@ -200,6 +200,7 @@ function startCombatLogMonitoring(logFilePath: string): void {
         breed: number;
         className: string | null;
         fighterId?: number;
+        isControlledByAI?: boolean;
       };
     }) => {
       CombatHandler.handleFighterJoined(

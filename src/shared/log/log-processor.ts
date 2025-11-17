@@ -23,6 +23,7 @@ export interface Fighter {
   breed: number;
   className: string | null; // null si la classe n'est pas connue
   fighterId?: number; // Identifiant unique du fighter dans le combat
+  isControlledByAI?: boolean; // true si c'est un NPC/monstre, false si c'est un joueur
 }
 
 export interface CombatStartInfo {
@@ -168,7 +169,8 @@ export class LogParser {
           playerName,
           breed,
           className,
-          fighterId
+          fighterId,
+          isControlledByAI: false // Stocker explicitement le flag (on est déjà dans le cas isControlledByAI=false)
         }]
       };
     }

@@ -44,6 +44,12 @@ export class CombatHandler {
     fighterIdToFighter.clear();
 
     for (const fighter of combatInfo.fighters) {
+      // Vérifier que c'est un joueur (isControlledByAI doit être false ou undefined pour compatibilité)
+      if (fighter.isControlledByAI === true) {
+        console.log(`[COMBAT HANDLER] Skipping NPC: ${fighter.playerName}`);
+        continue;
+      }
+      
       if (fighter.className) {
         console.log(`[COMBAT HANDLER] Processing fighter: ${fighter.playerName} (${fighter.className})`);
         const key = `${fighter.className}_${fighter.playerName}`;
@@ -118,6 +124,7 @@ export class CombatHandler {
         breed: number;
         className: string | null;
         fighterId?: number;
+        isControlledByAI?: boolean;
       };
     },
     launcherWindow: BrowserWindow | null,
@@ -127,6 +134,12 @@ export class CombatHandler {
     logMonitor: any,
     windowWatcher: WindowWatcher | null
   ): void {
+    // Vérifier que c'est un joueur (isControlledByAI doit être false ou undefined pour compatibilité)
+    if (data.fighter.isControlledByAI === true) {
+      console.log(`[COMBAT HANDLER] Skipping NPC joining: ${data.fighter.playerName}`);
+      return;
+    }
+    
     if (!data.fighter.className) {
       return;
     }
