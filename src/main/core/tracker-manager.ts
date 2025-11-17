@@ -461,7 +461,7 @@ export class TrackerManager {
       }
       this.visibilityUpdateTimeout = setTimeout(() => {
         this.updateTrackersVisibility(true);
-      }, 1000); // Attendre 1s avant de mettre à jour (réduire la fréquence)
+      }, 200); // Attendre 200ms avant de mettre à jour (réduction pour réactivité)
       return;
     }
 
@@ -611,17 +611,23 @@ export class TrackerManager {
               // Repositionner après le chargement
               this.positionTrackerOnGameWindow(stillExists, character, trackerType);
               WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.COMBAT_STARTED);
+              // Mettre à jour la visibilité immédiatement après l'affichage
               setTimeout(() => {
                 WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.REFRESH_UI);
-              }, 100);
+                // Forcer la mise à jour de position immédiatement
+                this.updateTrackersVisibility(true);
+              }, 50);
             }
           });
         } else {
           console.log(`[TRACKER MANAGER] Tracker ${trackerType} already loaded, sending events immediately`);
           WindowManager.safeSendToWindow(window, IPC_EVENTS.COMBAT_STARTED);
+          // Mettre à jour la visibilité immédiatement après l'affichage
           setTimeout(() => {
             WindowManager.safeSendToWindow(window, IPC_EVENTS.REFRESH_UI);
-          }, 100);
+            // Forcer la mise à jour de position immédiatement
+            this.updateTrackersVisibility(true);
+          }, 50);
         }
       } else {
         console.log(`[TRACKER MANAGER] Failed to get window for tracker ${trackerType}`);

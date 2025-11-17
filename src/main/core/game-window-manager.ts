@@ -28,7 +28,7 @@ export class GameWindowManager {
   private static windows: Map<string, GameWindow> = new Map();
   private static activeWindowId: string | null = null;
   private static checkInterval: NodeJS.Timeout | null = null;
-  private static checkIntervalMs: number = 1000; // Vérifier toutes les 1s (réduire la fréquence)
+  private static checkIntervalMs: number = 300; // Vérifier toutes les 300ms pour une détection plus rapide
   private static detectedCharacters: Map<string, { className: string; playerName: string }> = new Map();
   private static lastActiveCharacterFromLogs: { playerName: string; className: string } | null = null;
   private static lastCharacterFromLogsTimestamp: number = 0; // Timestamp de la dernière mise à jour depuis les logs

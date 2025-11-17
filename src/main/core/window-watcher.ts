@@ -11,7 +11,7 @@ import { TrackerManager } from "./tracker-manager";
 export class WindowWatcher {
   private intervalId: NodeJS.Timeout | null = null;
   private lastWindowTitle: string | null = null;
-  private checkInterval: number = 1000; // Vérifier toutes les 1s (réduire la fréquence)
+  private checkInterval: number = 300; // Vérifier toutes les 300ms pour une détection plus rapide
   private isTurnActive: boolean = false;
   private lastDetectedCharacter: { playerName: string; className: string } | null = null;
   private onCharacterChangedCallback: ((character: { playerName: string; className: string } | null) => void) | null = null;
