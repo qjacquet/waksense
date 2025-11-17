@@ -83,6 +83,12 @@ export class WindowManager {
 
     const window = new BrowserWindow(defaults);
 
+    // S'assurer que la fenêtre reste au-dessus même en fullscreen
+    // Utiliser setAlwaysOnTop avec un niveau élevé pour rester au-dessus des jeux en fullscreen
+    if (options.alwaysOnTop !== false) {
+      window.setAlwaysOnTop(true, "screen-saver", 1);
+    }
+
     window.on("moved", () => {
       if (!window.isDestroyed()) {
         const bounds = window.getBounds();

@@ -19,6 +19,7 @@ import { Config } from "./config";
 import { CombatHandler } from "./combat-handler";
 import { IPC_EVENTS } from "../../shared/constants/ipc-events";
 import { PATTERNS } from "../../shared/constants/patterns";
+import { GameWindowManager } from "./game-window-manager";
 
 export interface Character {
   className: string;
@@ -26,6 +27,16 @@ export interface Character {
 }
 
 export class TrackerManager {
+  private static lastActiveCharacter: { playerName: string; className: string } | null = null;
+  private static visibilityUpdateTimeout: NodeJS.Timeout | null = null;
+  private static lastShowTime: number = 0;
+  private static hideProtectionDelay: number = 2000; // Ne pas cacher pendant 2s après un affichage
+  private static lastKnownActiveWindow: { id: string; character: { playerName: string; className: string } } | null = null;
+  private static lastWindowBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private static windowMovingTimeout: NodeJS.Timeout | null = null;
+  private static activeCharactersByWindow: Map<string, { playerName: string; className: string }> = new Map(); // Fenêtre -> personnage actif
+  private static lastTrackerPositions: Map<string, { x: number; y: number }> = new Map(); // Tracker ID -> dernière position
+
   /**
    * Génère l'ID d'un tracker
    * Note: Si trackerType est "main" ou vide, aucun suffixe n'est ajouté
@@ -116,13 +127,25 @@ export class TrackerManager {
 
     if (window && !window.isDestroyed()) {
       console.log(`[TRACKER MANAGER] Tracker ${trackerId} exists, showing it`);
+      
+      // Positionner le tracker par rapport à la fenêtre du jeu
+      this.positionTrackerOnGameWindow(window, character, trackerType);
+      
       window.show();
-      window.focus();
+      this.lastShowTime = Date.now(); // Enregistrer le moment de l'affichage
+      // Ne pas faire focus() pour éviter de voler le focus au jeu
       return window;
     }
 
     console.log(`[TRACKER MANAGER] Tracker ${trackerId} doesn't exist, creating it`);
-    return this.createTracker(character, trackerType);
+    const newWindow = this.createTracker(character, trackerType);
+    if (newWindow && !newWindow.isDestroyed()) {
+      // Positionner le tracker par rapport à la fenêtre du jeu
+      this.positionTrackerOnGameWindow(newWindow, character, trackerType);
+      newWindow.show();
+      this.lastShowTime = Date.now(); // Enregistrer le moment de l'affichage
+    }
+    return newWindow;
   }
 
   /**
@@ -188,6 +211,17 @@ export class TrackerManager {
         }
       }
     }
+    // Nettoyer les personnages actifs
+    this.activeCharactersByWindow.clear();
+    this.lastTrackerPositions.clear();
+  }
+
+  /**
+   * Nettoie les personnages actifs (appelé à la fin du combat)
+   */
+  static clearActiveCharacters(): void {
+    this.activeCharactersByWindow.clear();
+    this.lastTrackerPositions.clear();
   }
 
   /**
@@ -338,7 +372,163 @@ export class TrackerManager {
   }
 
   /**
+   * Positionne un tracker par rapport à la fenêtre du jeu
+   */
+  private static positionTrackerOnGameWindow(
+    trackerWindow: BrowserWindow,
+    character: Character,
+    trackerType: string
+  ): void {
+    const trackerId = this.getTrackerId(
+      character.className,
+      character.playerName,
+      trackerType
+    );
+
+    // Vérifier s'il y a une position sauvegardée
+    const savedPos = Config.getOverlayPosition(trackerId);
+    if (savedPos) {
+      // Utiliser la position sauvegardée
+      trackerWindow.setPosition(savedPos.x, savedPos.y);
+      if (savedPos.width && savedPos.height) {
+        trackerWindow.setSize(savedPos.width, savedPos.height);
+      }
+      return;
+    }
+
+    // Sinon, positionner par rapport à la fenêtre du jeu
+    // Chercher la fenêtre de jeu correspondante à ce personnage
+    const gameWindow = GameWindowManager.getWindowForCharacter(character);
+    if (!gameWindow) {
+      // Si aucune fenêtre trouvée directement, chercher dans toutes les fenêtres
+      const allGameWindows = GameWindowManager.getAllWindows();
+      for (const [id, gw] of allGameWindows) {
+        if (gw.character && 
+            gw.character.playerName === character.playerName && 
+            gw.character.className === character.className) {
+          this.positionTrackerRelativeToGameWindow(trackerWindow, gw);
+          return;
+        }
+      }
+      // Si vraiment aucune fenêtre trouvée, utiliser la fenêtre active comme fallback
+      const activeGameWindow = GameWindowManager.getActiveWindow();
+      if (activeGameWindow) {
+        this.positionTrackerRelativeToGameWindow(trackerWindow, activeGameWindow);
+      }
+      return;
+    }
+
+    this.positionTrackerRelativeToGameWindow(trackerWindow, gameWindow);
+  }
+
+  /**
+   * Positionne un tracker par rapport à une fenêtre de jeu
+   */
+  private static positionTrackerRelativeToGameWindow(
+    trackerWindow: BrowserWindow,
+    gameWindow: { bounds: { x: number; y: number; width: number; height: number } }
+  ): void {
+    const trackerBounds = trackerWindow.getBounds();
+    const gameBounds = gameWindow.bounds;
+
+    // Positionner le tracker en haut à droite de la fenêtre du jeu
+    // Avec un petit offset pour ne pas coller au bord
+    const offsetX = 10;
+    const offsetY = 10;
+
+    const newX = gameBounds.x + gameBounds.width - trackerBounds.width - offsetX;
+    const newY = gameBounds.y + offsetY;
+
+    trackerWindow.setPosition(newX, newY);
+  }
+
+  /**
+   * Définit le personnage actif pour une fenêtre (appelé au début du tour)
+   */
+  static setActiveCharacterForWindow(windowId: string, character: { playerName: string; className: string }): void {
+    this.activeCharactersByWindow.set(windowId, character);
+  }
+
+  /**
+   * Met à jour la position des trackers selon les fenêtres du jeu
+   * Ne gère QUE le positionnement, pas la visibilité (qui est gérée par showTrackersOnTurnStart/turnEnded)
+   */
+  static updateTrackersVisibility(immediate: boolean = false): void {
+    // Debounce pour éviter les appels trop fréquents
+    if (!immediate) {
+      if (this.visibilityUpdateTimeout) {
+        clearTimeout(this.visibilityUpdateTimeout);
+      }
+      this.visibilityUpdateTimeout = setTimeout(() => {
+        this.updateTrackersVisibility(true);
+      }, 1000); // Attendre 1s avant de mettre à jour (réduire la fréquence)
+      return;
+    }
+
+    const allWindows = WindowManager.getAllWindows();
+
+    // Pour chaque tracker visible, trouver la fenêtre de jeu correspondante et le positionner
+    for (const [id, trackerWindow] of allWindows) {
+      if (!id.startsWith(PATTERNS.TRACKER_ID_PREFIX) || trackerWindow.isDestroyed()) {
+        continue;
+      }
+
+      // Ne repositionner que les trackers déjà visibles
+      if (!trackerWindow.isVisible()) {
+        continue;
+      }
+
+      // Extraire le personnage depuis l'ID du tracker
+      const trackerIdParts = id.substring(PATTERNS.TRACKER_ID_PREFIX.length).split("-");
+      if (trackerIdParts.length < 2) {
+        continue;
+      }
+
+      const className = trackerIdParts[0];
+      const playerName = trackerIdParts[1];
+      const character = { className, playerName };
+
+      // Chercher la fenêtre de jeu correspondante à ce personnage
+      const gameWindow = GameWindowManager.getWindowForCharacter(character);
+      
+      if (gameWindow && gameWindow.character) {
+        // Repositionner seulement si la position a vraiment changé (évite les clignotements)
+        const currentBounds = trackerWindow.getBounds();
+        const lastPos = this.lastTrackerPositions.get(id);
+        const gameBounds = gameWindow.bounds;
+        const expectedX = gameBounds.x + gameBounds.width - currentBounds.width - 10;
+        const expectedY = gameBounds.y + 10;
+        
+        // Vérifier si la position doit être mise à jour (seuil de 10px pour éviter les micro-mouvements)
+        const needsReposition = !lastPos || 
+          Math.abs(lastPos.x - expectedX) > 10 || 
+          Math.abs(lastPos.y - expectedY) > 10;
+        
+        if (needsReposition) {
+          this.positionTrackerOnGameWindow(trackerWindow, character, this.getTrackerTypeFromId(id));
+          this.lastTrackerPositions.set(id, { x: expectedX, y: expectedY });
+        }
+      }
+    }
+  }
+
+  /**
+   * Extrait le type de tracker depuis son ID
+   * Format: tracker-{className}-{playerName}[-{trackerType}]
+   */
+  private static getTrackerTypeFromId(trackerId: string): string {
+    const parts = trackerId.substring(PATTERNS.TRACKER_ID_PREFIX.length).split("-");
+    if (parts.length > 2) {
+      // Il y a un type de tracker (ex: "jauge", "combos")
+      return parts.slice(2).join("-");
+    }
+    // Pas de type spécifique, c'est le tracker principal
+    return PATTERNS.TRACKER_MAIN;
+  }
+
+  /**
    * Affiche automatiquement les trackers configurés pour un personnage au début du tour
+   * Détecte tous les personnages, même ceux sans trackers, pour savoir quand ne rien afficher
    */
   static showTrackersOnTurnStart(character: Character): void {
     console.log(`[TRACKER MANAGER] showTrackersOnTurnStart called for ${character.playerName} (${character.className})`);
@@ -347,10 +537,50 @@ export class TrackerManager {
       return;
     }
 
+    // Trouver la fenêtre de jeu correspondante
+    let gameWindow = GameWindowManager.getWindowForCharacter(character);
+    if (!gameWindow) {
+      // Si pas de fenêtre trouvée pour ce personnage, utiliser la fenêtre active
+      // (peut arriver si le personnage n'est pas encore détecté depuis le titre)
+      const activeGameWindow = GameWindowManager.getActiveWindow();
+      if (activeGameWindow) {
+        gameWindow = activeGameWindow;
+        console.log(`[TRACKER MANAGER] No specific window found for ${character.playerName}, using active window: ${gameWindow.id}`);
+        
+        // Si la fenêtre active n'a pas de personnage associé, l'associer maintenant
+        if (!gameWindow.character) {
+          // Mettre à jour la fenêtre avec ce personnage
+          gameWindow.character = character;
+          const allWindows = GameWindowManager.getAllWindows();
+          allWindows.set(gameWindow.id, gameWindow);
+          console.log(`[TRACKER MANAGER] Associated character ${character.playerName} (${character.className}) to active window ${gameWindow.id}`);
+        }
+      } else {
+        console.log(`[TRACKER MANAGER] No game window found for ${character.playerName} and no active window`);
+        return;
+      }
+    }
+
+    // Marquer ce personnage comme actif pour cette fenêtre (même s'il n'a pas de trackers)
+    this.setActiveCharacterForWindow(gameWindow.id, character);
+
+    // Vérifier si cette classe a des trackers configurés
+    const classConfig = getClassConfig(character.className);
+    if (!classConfig || !classConfig.availableTrackerTypes || classConfig.availableTrackerTypes.length === 0) {
+      console.log(`[TRACKER MANAGER] No trackers configured for class ${character.className}, nothing to show`);
+      return;
+    }
+
     const autoShow = getAutoShowTrackers(character.className);
     const autoCreateButHide = getAutoCreateButHideTrackers(character.className);
     console.log(`[TRACKER MANAGER] Auto show trackers:`, autoShow);
     console.log(`[TRACKER MANAGER] Auto create but hide:`, autoCreateButHide);
+
+    // Si aucun tracker à afficher automatiquement, ne rien faire
+    if (autoShow.length === 0 && autoCreateButHide.length === 0) {
+      console.log(`[TRACKER MANAGER] No trackers to show or create for ${character.className}, skipping`);
+      return;
+    }
 
     for (const trackerType of autoShow) {
       console.log(`[TRACKER MANAGER] Showing tracker ${trackerType} for ${character.playerName}`);
@@ -362,6 +592,15 @@ export class TrackerManager {
           character.playerName,
           trackerType
         );
+        
+        // Positionner immédiatement
+        this.positionTrackerOnGameWindow(window, character, trackerType);
+        const currentBounds = window.getBounds();
+        const gameBounds = gameWindow.bounds;
+        const expectedX = gameBounds.x + gameBounds.width - currentBounds.width - 10;
+        const expectedY = gameBounds.y + 10;
+        this.lastTrackerPositions.set(trackerId, { x: expectedX, y: expectedY });
+        
         if (window.webContents.isLoading()) {
           console.log(`[TRACKER MANAGER] Tracker ${trackerType} is loading, waiting for did-finish-load`);
           window.webContents.once("did-finish-load", () => {
@@ -369,6 +608,8 @@ export class TrackerManager {
             const stillExists = WindowManager.getWindow(trackerId);
             if (stillExists && !stillExists.isDestroyed()) {
               console.log(`[TRACKER MANAGER] Tracker ${trackerType} finished loading, sending events`);
+              // Repositionner après le chargement
+              this.positionTrackerOnGameWindow(stillExists, character, trackerType);
               WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.COMBAT_STARTED);
               setTimeout(() => {
                 WindowManager.safeSendToWindow(stillExists, IPC_EVENTS.REFRESH_UI);
@@ -392,6 +633,43 @@ export class TrackerManager {
       if (window && !window.isDestroyed()) {
         window.hide();
       }
+    }
+  }
+
+  /**
+   * Cache les trackers d'un personnage à la fin de son tour
+   * Ne cache que les trackers configurés pour s'afficher automatiquement
+   * Nettoie aussi le personnage actif même s'il n'a pas de trackers
+   */
+  static hideTrackersOnTurnEnd(character: Character): void {
+    console.log(`[TRACKER MANAGER] hideTrackersOnTurnEnd called for ${character.playerName} (${character.className})`);
+    
+    // Vérifier si cette classe a des trackers configurés
+    const classConfig = getClassConfig(character.className);
+    if (classConfig && classConfig.availableTrackerTypes && classConfig.availableTrackerTypes.length > 0) {
+      // Ne cacher que les trackers qui sont configurés pour s'afficher automatiquement
+      const autoShow = getAutoShowTrackers(character.className);
+      for (const trackerType of autoShow) {
+        const trackerId = this.getTrackerId(
+          character.className,
+          character.playerName,
+          trackerType
+        );
+        const window = WindowManager.getWindow(trackerId);
+        if (window && !window.isDestroyed() && window.isVisible()) {
+          window.hide();
+          console.log(`[TRACKER MANAGER] Hiding tracker ${trackerType} for ${character.playerName}`);
+        }
+      }
+    } else {
+      console.log(`[TRACKER MANAGER] No trackers configured for class ${character.className}, nothing to hide`);
+    }
+    
+    // Nettoyer le personnage actif pour cette fenêtre (même s'il n'a pas de trackers)
+    const gameWindow = GameWindowManager.getWindowForCharacter(character);
+    if (gameWindow) {
+      this.activeCharactersByWindow.delete(gameWindow.id);
+      console.log(`[TRACKER MANAGER] Cleared active character for window ${gameWindow.id}`);
     }
   }
 }

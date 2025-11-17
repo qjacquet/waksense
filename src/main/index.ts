@@ -17,6 +17,7 @@ import { FighterMappings } from "./core/fighter-mappings";
 import { setupAssetsProtocol } from "./core/assets-protocol";
 import { IPC_EVENTS } from "../shared/constants/ipc-events";
 import { PATTERNS } from "../shared/constants/patterns";
+import { GameWindowManager } from "./core/game-window-manager";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -257,14 +258,37 @@ function startLogMonitoring(logFilePath: string): void {
         className: data.fighter.className,
       };
 
+      // Notifier le GameWindowManager du personnage actif depuis les logs
+      // Cela permet de détecter le personnage même en fullscreen
+      GameWindowManager.setActiveCharacterFromLogs(activeCharacter);
+
+      // Trouver la fenêtre de jeu correspondante et marquer ce personnage comme actif
+      const gameWindow = GameWindowManager.getWindowForCharacter(activeCharacter);
+      if (gameWindow) {
+        TrackerManager.setActiveCharacterForWindow(gameWindow.id, activeCharacter);
+      } else {
+        // Si pas de fenêtre trouvée, utiliser la fenêtre active
+        const activeGameWindow = GameWindowManager.getActiveWindow();
+        if (activeGameWindow) {
+          TrackerManager.setActiveCharacterForWindow(activeGameWindow.id, activeCharacter);
+        }
+      }
+
       TrackerManager.showTrackersOnTurnStart(activeCharacter);
 
       ensureLogMonitoring();
     }
   );
 
-  logMonitor.on("turnEnded", () => {
-    // Le WindowWatcher gère la fin/début de tour
+  logMonitor.on("turnEnded", (data: { fighterId: number; fighter: { playerName: string; className: string | null } | null }) => {
+    // Cacher les trackers du personnage dont le tour vient de se terminer
+    if (data.fighter && data.fighter.className) {
+      const character = {
+        playerName: data.fighter.playerName,
+        className: data.fighter.className,
+      };
+      TrackerManager.hideTrackersOnTurnEnd(character);
+    }
   });
 
   logMonitor.on("logLine", (line: string, parsed: any) => {

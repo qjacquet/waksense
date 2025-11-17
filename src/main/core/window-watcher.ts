@@ -2,15 +2,16 @@
  * Window Watcher - Surveille la fenêtre active du jeu Wakfu pour détecter le tour du personnage
  */
 
-import activeWin from "active-win";
 import { Config } from "./config";
 import { WindowManager } from "../windows/window-manager";
 import { PATTERNS } from "../../shared/constants/patterns";
+import { GameWindowManager } from "./game-window-manager";
+import { TrackerManager } from "./tracker-manager";
 
 export class WindowWatcher {
   private intervalId: NodeJS.Timeout | null = null;
   private lastWindowTitle: string | null = null;
-  private checkInterval: number = 300;
+  private checkInterval: number = 1000; // Vérifier toutes les 1s (réduire la fréquence)
   private isTurnActive: boolean = false;
   private lastDetectedCharacter: { playerName: string; className: string } | null = null;
   private onCharacterChangedCallback: ((character: { playerName: string; className: string } | null) => void) | null = null;
@@ -24,8 +25,13 @@ export class WindowWatcher {
       return;
     }
 
+    // Démarrer le GameWindowManager
+    GameWindowManager.start();
+
     this.intervalId = setInterval(() => {
       this.checkActiveWindow();
+      // Mettre à jour la visibilité des trackers périodiquement (avec debounce)
+      TrackerManager.updateTrackersVisibility(false);
     }, this.checkInterval);
 
     this.checkActiveWindow();
@@ -39,6 +45,7 @@ export class WindowWatcher {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    GameWindowManager.stop();
     this.lastWindowTitle = null;
     this.isTurnActive = false;
   }
@@ -49,6 +56,7 @@ export class WindowWatcher {
 
   setDetectedCharacters(characters: Map<string, { className: string; playerName: string }>): void {
     this.detectedCharactersInCombat = characters;
+    GameWindowManager.setDetectedCharacters(characters);
   }
 
   setTurnActive(isActive: boolean): void {
@@ -57,24 +65,11 @@ export class WindowWatcher {
 
   async getActiveCharacter(): Promise<{ playerName: string; className: string } | null> {
     try {
-      const window = await activeWin();
-      
-      if (!window) {
-        return null;
+      const activeWindow = GameWindowManager.getActiveWindow();
+      if (activeWindow && activeWindow.character) {
+        return activeWindow.character;
       }
-
-      const title = window.title || "";
-      const owner = window.owner?.name || "";
-      
-      const isWakfuWindow = 
-        title.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD) || 
-        owner.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD);
-
-      if (!isWakfuWindow) {
-        return null;
-      }
-
-      return this.extractCharacterFromTitle(title);
+      return null;
     } catch (error) {
       return null;
     }
@@ -127,24 +122,19 @@ export class WindowWatcher {
    */
   private async checkActiveWindow(): Promise<void> {
     try {
-      const window = await activeWin();
+      const activeWindow = GameWindowManager.getActiveWindow();
       
-      if (!window) {
+      if (!activeWindow) {
+        if (this.lastDetectedCharacter) {
+          this.lastDetectedCharacter = null;
+          if (this.onCharacterChangedCallback) {
+            this.onCharacterChangedCallback(null);
+          }
+        }
         return;
       }
 
-      const title = window.title || "";
-      const owner = window.owner?.name || "";
-      
-      const isWakfuWindow = 
-        title.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD) || 
-        owner.toLowerCase().includes(PATTERNS.WAKFU_WINDOW_KEYWORD);
-
-      if (!isWakfuWindow) {
-        return;
-      }
-
-      const currentCharacter = this.extractCharacterFromTitle(title);
+      const currentCharacter = activeWindow.character || null;
       
       if (currentCharacter) {
         const hasChanged = 
@@ -154,6 +144,9 @@ export class WindowWatcher {
         
         if (hasChanged) {
           this.lastDetectedCharacter = currentCharacter;
+          
+          // Marquer ce personnage comme actif pour cette fenêtre
+          TrackerManager.setActiveCharacterForWindow(activeWindow.id, currentCharacter);
           
           if (this.onCharacterChangedCallback) {
             this.onCharacterChangedCallback(currentCharacter);

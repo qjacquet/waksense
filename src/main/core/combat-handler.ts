@@ -8,7 +8,7 @@ import { ClassDetection } from "./log-monitor";
 import { TrackerManager } from "./tracker-manager";
 import { WindowManager } from "../windows/window-manager";
 import { WindowWatcher } from "./window-watcher";
-import { getTrackerTypes } from "../../shared/domain/class-tracker-config";
+import { getTrackerTypes, getClassConfig } from "../../shared/domain/class-tracker-config";
 import { IPC_EVENTS } from "../../shared/constants/ipc-events";
 import { PATTERNS } from "../../shared/constants/patterns";
 
@@ -68,8 +68,15 @@ export class CombatHandler {
           playerName: fighter.playerName,
         });
 
-        console.log(`[COMBAT HANDLER] Creating tracker for ${fighter.playerName}`);
-        this.createTrackerForFighter(fighter, launcherWindow);
+        // Créer un tracker seulement si la classe a des trackers configurés
+        const classConfig = getClassConfig(fighter.className);
+        const hasTrackers = classConfig && classConfig.availableTrackerTypes && classConfig.availableTrackerTypes.length > 0;
+        if (hasTrackers) {
+          console.log(`[COMBAT HANDLER] Creating tracker for ${fighter.playerName} (${fighter.className})`);
+          this.createTrackerForFighter(fighter, launcherWindow);
+        } else {
+          console.log(`[COMBAT HANDLER] No trackers configured for ${fighter.playerName} (${fighter.className}), skipping tracker creation (but character is still detected)`);
+        }
       }
     }
 
@@ -172,7 +179,15 @@ export class CombatHandler {
       windowWatcher.setDetectedCharacters(detectedCharsMap);
     }
 
-    this.createTrackerForFighter(data.fighter, launcherWindow);
+    // Créer un tracker seulement si la classe a des trackers configurés
+    const classConfig = getClassConfig(data.fighter.className);
+    const hasTrackers = classConfig && classConfig.availableTrackerTypes && classConfig.availableTrackerTypes.length > 0;
+    if (hasTrackers) {
+      console.log(`[COMBAT HANDLER] Creating tracker for ${data.fighter.playerName} (${data.fighter.className})`);
+      this.createTrackerForFighter(data.fighter, launcherWindow);
+    } else {
+      console.log(`[COMBAT HANDLER] No trackers configured for ${data.fighter.playerName} (${data.fighter.className}), skipping tracker creation (but character is still detected)`);
+    }
   }
 
   static handleCombatEnded(
@@ -260,6 +275,8 @@ export class CombatHandler {
         WindowManager.closeWindow(id);
       }
     }
+    // Nettoyer les personnages actifs
+    TrackerManager.clearActiveCharacters();
   }
 
   private static broadcastToTrackers(channel: string): void {
