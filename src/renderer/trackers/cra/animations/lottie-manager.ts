@@ -87,7 +87,18 @@ export class LottieManager {
       const lottie = (window as any).lottie;
 
       console.log("[CRA JAUGE] Chargement du fichier crosshair.json");
-      const response = await fetch("../../../assets/classes/cra/crosshair.json");
+      
+      // Utiliser le protocole assets:// pour charger le fichier JSON
+      // Cela fonctionne à la fois en développement et en production
+      let assetUrl: string;
+      if (typeof (window as any).electronAPI?.getAssetPath === "function") {
+        assetUrl = await (window as any).electronAPI.getAssetPath("classes", "cra", "crosshair.json");
+      } else {
+        // Fallback pour le mode debug (chemin relatif)
+        assetUrl = "../../../assets/classes/cra/crosshair.json";
+      }
+      
+      const response = await fetch(assetUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -133,6 +144,8 @@ export class LottieManager {
       console.log("[CRA JAUGE] Animation Lottie créée (0% → 50%):", this.tirPrecisLottieAnimation);
     } catch (error) {
       console.error("Erreur lors du chargement de l'animation Lottie de Tir précis:", error);
+      // Masquer le conteneur en cas d'erreur pour éviter l'overlay transparent
+      this.hideTirPrecisContainer();
     }
   }
 
